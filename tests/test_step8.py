@@ -3,6 +3,8 @@ import types
 from tempfile import NamedTemporaryFile
 from docx import Document
 from docx.shared import Pt
+from docx.enum.table import WD_ALIGN_VERTICAL
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from copy import deepcopy
 
 # Utility to load selected functions from the source file without executing the
@@ -14,7 +16,11 @@ def load_create_application_docx():
     wanted = {'set_cell_font', 'clone_row', 'create_application_docx'}
     funcs = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name in wanted]
     module = types.ModuleType('tmp')
-    module.__dict__.update({'Document': Document, 'Pt': Pt, 'deepcopy': deepcopy})
+    module.__dict__.update({'Document': Document,
+                            'Pt': Pt,
+                            'deepcopy': deepcopy,
+                            'WD_ALIGN_VERTICAL': WD_ALIGN_VERTICAL,
+                            'WD_ALIGN_PARAGRAPH': WD_ALIGN_PARAGRAPH})
     for node in funcs:
         code = compile(ast.Module([node], type_ignores=[]), path, 'exec')
         exec(code, module.__dict__)
