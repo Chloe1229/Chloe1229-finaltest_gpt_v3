@@ -1,8 +1,6 @@
 import streamlit as st
 from docx import Document
 from docx.shared import Pt
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_ALIGN_VERTICAL
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 import os
@@ -37,6 +35,7 @@ def go_to_step2():
     if st.session_state.step1_answer == "예":
         st.session_state.step = 2
 
+
 if st.session_state.step == 1:
     st.markdown("## Step 1")
     st.write(
@@ -44,10 +43,12 @@ if st.session_state.step == 1:
         "받거나 신고한 의약품의 제조원 또는 제조방법을 변경하는 경우에 "
         "해당한다."
     )
+
     
     st.session_state.step1_answer = st.radio(
         "답변을 선택하세요.", ["예", "아니오"], key="step1_radio"
     )
+
     
     if st.session_state.step1_answer == "예":
         st.success(
@@ -63,13 +64,14 @@ if st.session_state.step == 1:
 (근거 : 「의약품의 품목허가·신고·심사 규정」제6조(국제공통기술문서 작성) 제1항,
 제3조의2(의약품의 허가ㆍ신고의 변경 처리) 제6항)"""
         )
-        
+
 # ===== Step2 함수 및 화면 =====
 
 
 def go_to_step3():
     if st.session_state.step2_answer == "예":
         st.session_state.step = 3
+
 
 if st.session_state.step == 2:
     st.markdown("## Step 2")
@@ -104,6 +106,7 @@ if st.session_state.step == 2:
 def go_to_step4():
     if st.session_state.step3_answer == "예":
         st.session_state.step = 4
+
 
 if st.session_state.step == 3:
     st.markdown("## Step 3")
@@ -157,13 +160,19 @@ def go_to_step4():
 # Step 4 → Step 5 이동 함수
 def go_to_step5():
     st.session_state.step5_targets = [
-        code for code, val in st.session_state.step4_selections.items() if val == "변경 있음"
+        code
+        for code, val in st.session_state.step4_selections.items()
+        if val == "변경 있음"
     ]
     st.session_state.step = 5
 
+
 # Step 4 이전단계 복귀 함수
+
+
 def go_back_to_step3():
     st.session_state.step = 3
+
 
 # Step 4 실행
 if st.session_state.step == 4:
@@ -295,7 +304,9 @@ step5_items = {
 # ===== Step 간 이동 함수 =====
 def go_to_step6():
     st.session_state.step6_targets = [
-        key for key, val in st.session_state.step5_selections.items() if val == "변경 있음"
+        key
+        for key, val in st.session_state.step5_selections.items()
+        if val == "변경 있음"
     ]
     st.session_state.step = 6
 
