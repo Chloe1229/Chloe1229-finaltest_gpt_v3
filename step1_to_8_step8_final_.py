@@ -1688,7 +1688,10 @@ if st.session_state.step == 8:
             f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
             unsafe_allow_html=True,
         )
-        st.write(
+        st.markdown(
+            "<h5 style='text-align:center; font-size:85%'>「의약품 허가 후 제조방법변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+            unsafe_allow_html=True,
+        )        st.write(
             "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
             "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
             "범위에 해당하지 않는 것으로 확인됩니다."
@@ -1744,8 +1747,11 @@ if st.session_state.step == 8:
         st.markdown(
             f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
             unsafe_allow_html=True,
-        )                
-        html = textwrap.dedent(
+        )
+        st.markdown(
+            "<h5 style='text-align:center; font-size:85%'>「의약품 허가 후 제조방법변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+            unsafe_allow_html=True,
+        )        html = textwrap.dedent(
             f"""
 <style>
 table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
@@ -1812,12 +1818,6 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
             )
         html += "</table>"
         st.markdown(html, unsafe_allow_html=True)
-
-
-    st.markdown(
-        "<h5 style='text-align:center; font-size:85%'>「의약품 허가 후 제조방법변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-        unsafe_allow_html=True,
-    )
 
     nav_left, nav_right = st.columns(2)
     with nav_left:
