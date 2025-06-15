@@ -1476,8 +1476,19 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
 
-    # Preserve original column widths from the template
-    orig_widths = [1514475, 1404620, 680085, 1152525, 1817370]
+    # Preserve original column widths from the template and adjust as requested
+    # 1. "1. 신청인" -> 4/7 of original
+    # 2. "성명" 등 label column -> 1.3× of original
+    # 3. "2. 변경유형" column -> 1.5× of original
+    # Remaining columns keep their original sizes
+    # Final width values after rounding by python-docx
+    orig_widths = [
+        865505,   # 1. 신청인 (≈4/7 of original)
+        1826260,  # 성명/제조소/제품명 (≈1.3× original)
+        1019810,  # 2. 변경유형 (≈1.5× original)
+        1152525,  # 3. 신청 유형
+        1817370,  # 조건 충족 여부/해당 페이지 표시
+    ]
     for col, width in zip(table.columns, orig_widths):
         col.width = width
 
@@ -1608,7 +1619,7 @@ def docx_to_pdf_bytes(docx_path):
 
 def open_pdf_in_browser(pdf_bytes, print_after_open=False):
     encoded = base64.b64encode(pdf_bytes).decode()
-    print_call = "win.print();" if print_after_open else ""
+    print_call = "setTimeout(() => { win.focus(); win.print(); }, 100);" if print_after_open else ""
     js = f"""
     <script>
     const data = '{encoded}';
@@ -1620,8 +1631,13 @@ def open_pdf_in_browser(pdf_bytes, print_after_open=False):
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], {{type: 'application/pdf'}});
     const url = URL.createObjectURL(blob);
-    const win = window.open(url, '_blank');
-    win.onload = function() {{ {print_call} }};
+    const win = window.open('', '_blank');
+    const iframe = win.document.createElement('iframe');
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.src = url;
+    iframe.onload = function() {{ {print_call} }};
+    win.document.body.appendChild(iframe);
     </script>
     """
     st.components.v1.html(js, height=0)
@@ -1655,7 +1671,10 @@ if st.session_state.step == 8:
     page = st.session_state.step8_page
     total_pages = len(page_list)
     current_key, current_idx = page_list[page]
+
+    # Always prepare an empty list for document texts
     output2_text_list = []
+    
     # Render message when there is no matching result for this page
     if current_idx is None:
         st.write(
@@ -1708,16 +1727,6 @@ if st.session_state.step == 8:
         with col_right:
             if st.button("🖨 인쇄하기"):
                 open_pdf_in_browser(pdf_bytes, print_after_open=True)
-                
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            "<h5 style='text-align:center; font-size:85%'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-            unsafe_allow_html=True,
-        )
         
         html = textwrap.dedent(
             f"""
@@ -1786,6 +1795,17 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
             )
         html += "</table>"
         st.markdown(html, unsafe_allow_html=True)
+
+        st.markdown(
+        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<h5 style='text-align:center; font-size:85%'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+        unsafe_allow_html=True,
+    )
+
 
     nav_left, nav_right = st.columns(2)
     with nav_left:
