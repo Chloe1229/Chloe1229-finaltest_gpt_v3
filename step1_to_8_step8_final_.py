@@ -2,11 +2,14 @@ import streamlit as st
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 import os
 import textwrap
 import re
+import base64
+import mammoth
 
 
 # ===== 초기 상태 정의 =====
@@ -1421,6 +1424,15 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
 
+    # Adjust column widths according to specification
+    col_widths = [col.width for col in table.columns]
+    table.columns[0].width = int(col_widths[0] * 4 / 7)
+    table.columns[1].width = int(col_widths[1] * 1.3)
+    table.columns[2].width = int(col_widths[2] * 1.5)
+    narrowed = int(table.columns[3].width * 0.8)
+    table.columns[3].width = narrowed
+    table.columns[4].width = narrowed
+
     # Ensure header cells use 12pt font
     header_cells = [
         (0, 0),
@@ -1438,6 +1450,18 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     for r, c in header_cells:
         r_idx = r + extra_reqs if r >= 11 else r
         set_cell_font(table.cell(r_idx, c), 12)
+
+    # Apply header text adjustments with line breaks
+    for c in [2, 3, 4]:
+        table.cell(3, c).text = "3. 신청 유형\n(AR, IR, Cmin, Cmaj 중 선택)"
+        set_cell_font(table.cell(3, c), 12)
+    for c in [3, 4]:
+        cell = table.cell(5, c)
+        cell.text = "조건 충족 여부\n(○, X 중 선택)"
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        set_cell_font(cell, 12)
+    for c in [0, 1, 2]:
+        table.cell(5, c).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         
     # 1. 신청인: template rows 0-2, columns 2-4 hold the value area
     for r_idx, key in enumerate(["name", "site", "product"]):
@@ -1445,6 +1469,9 @@ def create_application_docx(current_key, result, requirements, selections, outpu
             cell = table.cell(r_idx, c)
             cell.text = ""
             set_cell_font(cell, 11)
+            for p in cell.paragraphs:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER    
 
     # 2-3. 변경유형 / 신청유형 (row 4)
     change_text = result["title_text"]
@@ -1507,6 +1534,12 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         cell.text = ""
         set_cell_font(cell, 11)
 
+    # Reduce all row heights
+    for row in table.rows:
+        height = row.height or 360000
+        row.height = int(height * 0.8)
+        row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+
     doc.save(file_path)
     return file_path
 
@@ -1539,45 +1572,53 @@ if st.session_state.step == 8:
     page = st.session_state.step8_page
     total_pages = len(page_list)
     current_key, current_idx = page_list[page]
-    # Render message when there is no matching result for this page
+
+    message_text = (
+        "해당 변경사항에 대한 충족조건을 고려하였을 때, "
+        "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는 범위에 해당하지 않는 것으로 확인됩니다."
+    )
+    
     if current_idx is None:
-        st.write(
-            "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
-            "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
-            "범위에 해당하지 않는 것으로 확인됩니다."
-        )
+        st.write(message_text)
     else:
         result = step7_results[current_key][current_idx]
         requirements = step6_items.get(current_key, {}).get("requirements", {})
-
-
-        selections = {
-            f"{current_key}_req_{rk}": step6_selections.get(f"{current_key}_req_{rk}", "")
-            for rk in requirements
-        }
-        output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
-        for idx, line in enumerate(output2_text_list):
-            if re.match(r"^\d+[.)]", line):
-                output2_text_list = output2_text_list[idx:]
-                break
+        if not result.get("output_1_tag") or not result.get("output_2_text"):
+            st.write(message_text)
         else:
-            output2_text_list = []
-        output2_text_list = output2_text_list[:15]
-        with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
-            file_path = tmp.name
-            create_application_docx(
-                current_key,
-                result,
-                requirements,
-                selections,
-                output2_text_list,
-                file_path,
-            )
+            
+            
+            selections = {
+                f"{current_key}_req_{rk}": step6_selections.get(f"{current_key}_req_{rk}", "")
+                for rk in requirements
+            }
+            output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
+            for idx, line in enumerate(output2_text_list):
+                if re.match(r"^\d+[.)]", line):
+                    output2_text_list = output2_text_list[idx:]
+                    break
+            else:
+                output2_text_list = []
+            output2_text_list = output2_text_list[:15]
+            with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
+                file_path = tmp.name
+                create_application_docx(
+                    current_key,
+                    result,
+                    requirements,
+                    selections,
+                    output2_text_list,
+                    file_path,
+                )
 
-        with open(file_path, "rb") as f:
+            with open(file_path, "rb") as f:
             file_bytes = f.read()
+
+        with open(file_path, "rb") as docx_file:
+            html_preview = mammoth.convert_to_html(docx_file).value
+        html_b64 = base64.b64encode(html_preview.encode("utf-8")).decode("utf-8")
     
-        col_left, col_right = st.columns(2)
+        col_left, _, col_right = st.columns([1, 6, 1])
         with col_left:
             st.download_button(
                 "📄 파일 다운로드",
@@ -1587,10 +1628,22 @@ if st.session_state.step == 8:
         os.remove(file_path)
         with col_right:
             if st.button("🖨 인쇄하기"):
-                st.components.v1.html("<script>window.print();</script>", height=0)
+                st.components.v1.html(
+                    f"""
+                    <script>
+                    var html = atob('{html_b64}');
+                    var w = window.open('', '_blank');
+                    w.document.write(html);
+                    w.document.close();
+                    w.focus();
+                    w.print();
+                    </script>
+                    """,
+                    height=0,
+                )
                 
         st.markdown(
-            "<h5 style='text-align:center'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+            "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
             unsafe_allow_html=True,
         )
         
@@ -1604,21 +1657,21 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
 </style>
 <table>
   <tr>
-    <td class='title' rowspan='3' style='width:11%'>1. 신청인</td>
-    <td class='normal' style='width:10%'>성명</td>
-    <td colspan='3' style='width:79%'></td>
+    <td class='title' rowspan='3' style='width:16.5%'>1. 신청인</td>
+    <td class='normal' style='width:25%'>성명</td>
+    <td colspan='3' style='width:58.5%'></td>
   </tr>
   <tr>
-    <td class='normal'>제조소(영업소) 명칭</td>
-    <td colspan='3'></td>
+    <td class='normal' style='width:25%'>제조소(영업소) 명칭</td>
+    <td colspan='3' style='width:58.5%'></td>
   </tr>
   <tr>
-    <td class='normal'>변경신청 제품명</td>
-    <td colspan='3'></td>
+    <td class='normal' style='width:25%'>변경신청 제품명</td>
+    <td colspan='3' style='width:58.5%'></td>
   </tr>
   <tr>
-    <td class='title' colspan='2'>2. 변경유형</td>
-    <td class='title' colspan='3'>3. 신청 유형(AR, IR, Cmin, Cmaj 중 선택)</td>
+    <td class='title' colspan='2' style='width:51%'>2. 변경유형</td>
+    <td class='title' colspan='3'>3. 신청 유형<br>(AR, IR, Cmin, Cmaj 중 선택)</td>
   </tr>
   <tr>
     <td colspan='2' class='normal'>{result["title_text"]}</td>
@@ -1631,33 +1684,33 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
 """
         )
 
-        req_items = list(requirements.items())
-        max_reqs = max(5, min(15, len(req_items)))
-        for idx in range(max_reqs):
-            if idx < len(req_items):
-                rk, text = req_items[idx]
-                state = selections.get(f"{current_key}_req_{rk}", "")
-                symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
-            else:
-                text = ""
-                symbol = ""
-            html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td><td colspan='2' class='normal'>{symbol}</td></tr>"
+            req_items = list(requirements.items())
+            max_reqs = max(5, min(15, len(req_items)))
+            for idx in range(max_reqs):
+                if idx < len(req_items):
+                    rk, text = req_items[idx]
+                    state = selections.get(f"{current_key}_req_{rk}", "")
+                    symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
+                else:
+                    text = ""
+                    symbol = ""
+                html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td><td colspan='2' class='normal'>{symbol}</td></tr>"
 
-        html += textwrap.dedent(
-            """
+            html += textwrap.dedent(
+                """
   <tr>
     <td class='title' colspan='3'>5. 필요서류 (해당하는 필요서류 기재)</td>
-    <td class='title' style='width:8%'>구비 여부<br>(○, X 중 선택)</td>
-    <td class='title' style='width:13%'>해당 페이지 표시</td>
+    <td class='title' style='width:1%; white-space:nowrap;'>구비 여부<br>(○, X 중 선택)</td>
+    <td class='title'>해당 페이지 표시</td>
   </tr>
 """
-        )
-    max_docs = max(5, len(output2_text_list))
-    for i in range(max_docs):
-        line = output2_text_list[i] if i < len(output2_text_list) else ""
-        html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td><td class='normal'></td><td class='normal'></td></tr>"
-    html += "</table>"
-    st.markdown(html, unsafe_allow_html=True)
+            )
+            max_docs = max(5, len(output2_text_list))
+            for i in range(max_docs):
+                line = output2_text_list[i] if i < len(output2_text_list) else ""
+                html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td><td class='normal'></td><td class='normal'></td></tr>"
+            html += "</table>"
+            st.markdown(html, unsafe_allow_html=True)
 
     # Display page number and navigation for all pages
     st.markdown(
