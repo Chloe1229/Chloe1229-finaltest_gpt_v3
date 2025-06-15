@@ -44,3 +44,12 @@ File "/mount/src/finaltest_gpt_v2/step1_to_8_step8_final_.py", line 1655, in <mo
 - 조건 충족 여부(○, X 중 선택) : 현재 매우 만족스럽습니다.
 - 구비 여부 (○, X 중 선택) : '구비 여부\n(○, X 중 선택)'으로 줄바꿈을 적용하고, 열 너비는 구비 여부\n(○, X 중 선택)'이 딱 들어갈 너비 정도로만 하겠습니다. 
 - 해당 페이지 표시 : '조건 충족 여부(○, X 중 선택)'의 너비와 동일하게 하겠습니다.
+
+## WeasyPrint 시스템 라이브러리 설치
+WeasyPrint는 GTK 관련 라이브러리에 의존합니다. 이러한 라이브러리가 없으면 PDF 생성 및 인쇄가 실패합니다. 다음 라이브러리를 설치하세요.
+```배쉬
+sudo apt-get 업데이트
+sudo apt-get install libpango-1.0-0 libgdk-pixbuf2.0-0
+pip로 weasyprint 설치
+```
+
