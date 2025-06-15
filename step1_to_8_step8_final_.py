@@ -1,13 +1,12 @@
 import streamlit as st
 from docx import Document
 from docx.shared import Pt
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 import os
 import textwrap
 import re
-import base64
-import mammoth
 
 
 # ===== 초기 상태 정의 =====
@@ -28,111 +27,68 @@ if "step5_targets" not in st.session_state:
     st.session_state.step5_targets = []
 
 # ===== Step1 함수 및 화면 =====
-
-
 def go_to_step2():
     if st.session_state.step1_answer == "예":
         st.session_state.step = 2
 
-
 if st.session_state.step == 1:
     st.markdown("## Step 1")
-    st.write(
-        "제6조제1항에 따라 국제공통기술문서(CTD)로 작성하여 허가를 "
-        "받거나 신고한 의약품의 제조원 또는 제조방법을 변경하는 경우에 "
-        "해당한다."
-    )
+    st.write("제6조제1항에 따라 국제공통기술문서(CTD)로 작성하여 허가를 받거나 신고한 의약품의 제조원 또는 제조방법을 변경하는 경우에 해당한다.")
 
-    
-    st.session_state.step1_answer = st.radio(
-        "답변을 선택하세요.", ["예", "아니오"], key="step1_radio"
-    )
+    st.session_state.step1_answer = st.radio("답변을 선택하세요.", ["예", "아니오"], key="step1_radio")
 
-    
     if st.session_state.step1_answer == "예":
-        st.success(
-            """CTD 작성대상 완제의약품 해당합니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」제6조(국제공통기술문서 작성) 제1항,
-제3조의2(의약품의 허가ㆍ신고의 변경 처리) 제6항)"""
-        )
+        st.success("""CTD 작성대상 완제의약품 해당합니다.
+(근거 : 「의약품의 품목허가·신고·심사 규정」제6조(국제공통기술문서 작성) 제1항, 제3조의2(의약품의 허가ㆍ신고의 변경 처리) 제6항)""")
+        st.button("다음단계로", on_click=go_to_step2)
 
     elif st.session_state.step1_answer == "아니오":
-        st.warning(
-            """CTD 작성대상 완제의약품 해당여부를 확인하고, 작성 대상에 해당하는 경우 먼저, CTD 제3부 품질평가 자료 중        
+        st.warning("""CTD 작성대상 완제의약품 해당여부를 확인하고, 작성 대상에 해당하는 경우 먼저, CTD 제3부 품질평가 자료 중
 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7를 제출하여 제조방법 자료로서 심사 받으시기 바랍니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」제6조(국제공통기술문서 작성) 제1항,
-제3조의2(의약품의 허가ㆍ신고의 변경 처리) 제6항)"""
-        )
+(근거 : 「의약품의 품목허가·신고·심사 규정」제6조(국제공통기술문서 작성) 제1항, 제3조의2(의약품의 허가ㆍ신고의 변경 처리) 제6항)""")
 
 # ===== Step2 함수 및 화면 =====
-
-
 def go_to_step3():
     if st.session_state.step2_answer == "예":
         st.session_state.step = 3
 
-
 if st.session_state.step == 2:
     st.markdown("## Step 2")
-    st.write(
-        "제조에 관한 항목 (CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 "
-        "3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7)을 변경 하는 경우에 해당한다."
-    )
+    st.write("제조에 관한 항목 (CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7)을 변경 하는 경우에 해당한다.")
 
-    st.session_state.step2_answer = st.radio(
-        "답변을 선택하세요.", ["예", "아니오"], key="step2_radio"
-    )
+    st.session_state.step2_answer = st.radio("답변을 선택하세요.", ["예", "아니오"], key="step2_radio")
 
     if st.session_state.step2_answer == "예":
-        st.success(
-            """「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」의 적용 대상 항목의 변경에 해당합니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])"""
-        )
+        st.success("""「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」의 적용 대상 항목의 변경에 해당합니다.
+(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
         st.button("다음단계로", on_click=go_to_step3)
 
     elif st.session_state.step2_answer == "아니오":
-        st.warning(
-            """제조에 관한 항목은 CTD 제3부 품질평가 자료 중
+        st.warning("""제조에 관한 항목은 CTD 제3부 품질평가 자료 중
 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7에 해당하며
 「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」는 해당 항목에 대한 변경에 대해 안내하고 있으므로,
 가이드라인 적용 대상에 해당하지 않습니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])"""
-        )
+(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
 
 # ===== Step3 함수 및 화면 =====
-
-
 def go_to_step4():
     if st.session_state.step3_answer == "예":
         st.session_state.step = 4
 
-
 if st.session_state.step == 3:
     st.markdown("## Step 3")
-    st.write(
-        "품목의 허가(신고) 사항 중 제조방법에 해당하는 자료(CTD 제3부 품질평가 "
-        "자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7)를 "
-        "국제공통기술문서(CTD)로서 제출하여 심사받은 ‘제조방법 CTD 적용(또는 "
-        "전환)’ 품목에 해당한다."
-    )
+    st.write("품목의 허가(신고) 사항 중 제조방법에 해당하는 자료(CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7)를 국제공통기술문서(CTD)로서 제출하여 심사받은 ‘제조방법 CTD 적용(또는 전환)’ 품목에 해당한다.")
 
-    st.session_state.step3_answer = st.radio(
-        "답변을 선택하세요.", ["예", "아니오"], key="step3_radio"
-    )
+    st.session_state.step3_answer = st.radio("답변을 선택하세요.", ["예", "아니오"], key="step3_radio")
 
     if st.session_state.step3_answer == "예":
-        st.success(
-            """「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」에 따라 변경수준을 확인할 수 있습니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])"""
-        )
+        st.success("""「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」에 따라 변경수준을 확인할 수 있습니다.  
+(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
         st.button("다음단계로", on_click=go_to_step4)
 
     elif st.session_state.step3_answer == "아니오":
-        st.warning(
-            """먼저, CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2,
-3.2.P.3, 3.2.P.4, 3.2.P.7를 제출하여 제조방법 자료로서 심사 받으시기 바랍니다.
-(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])"""
-        )
+        st.warning("""먼저, CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7를 제출하여 제조방법 자료로서 심사 받으시기 바랍니다.  
+(근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
 
 # Step 4 상태 초기화
 if "step4_selections" not in st.session_state:
@@ -159,19 +115,13 @@ def go_to_step4():
 # Step 4 → Step 5 이동 함수
 def go_to_step5():
     st.session_state.step5_targets = [
-        code
-        for code, val in st.session_state.step4_selections.items()
-        if val == "변경 있음"
+        code for code, val in st.session_state.step4_selections.items() if val == "변경 있음"
     ]
     st.session_state.step = 5
 
-
 # Step 4 이전단계 복귀 함수
-
-
 def go_back_to_step3():
     st.session_state.step = 3
-
 
 # Step 4 실행
 if st.session_state.step == 4:
@@ -303,9 +253,7 @@ step5_items = {
 # ===== Step 간 이동 함수 =====
 def go_to_step6():
     st.session_state.step6_targets = [
-        key
-        for key, val in st.session_state.step5_selections.items()
-        if val == "변경 있음"
+        key for key, val in st.session_state.step5_selections.items() if val == "변경 있음"
     ]
     st.session_state.step = 6
 
@@ -1469,33 +1417,10 @@ def clone_row(table, row_idx):
     return new_row
     
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
-    from docx.enum.table import WD_ALIGN_VERTICAL
-    from docx.enum.text import WD_ALIGN_PARAGRAPH    
     # Load template to preserve all styles and merges
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
 
-    # Preserve original column widths from the template and adjust as requested
-    # 1. "1. 신청인" -> 4/7 of original
-    # 2. "성명" 등 label column -> 1.3× of original
-    # 3. "2. 변경유형" column -> 1.5× of original
-    # Remaining columns keep their original sizes
-    # Final width values after rounding by python-docx
-    orig_widths = [
-        865505,   # 1. 신청인 (≈4/7 of original)
-        1826260,  # 성명/제조소/제품명 (≈1.3× original)
-        1019810,  # 2. 변경유형 (≈1.5× original)
-        1152525,  # 3. 신청 유형
-        1817370,  # 조건 충족 여부/해당 페이지 표시
-    ]
-    for col, width in zip(table.columns, orig_widths):
-        col.width = width
-
-    # Scale row heights to 0.8×
-    for row in table.rows:
-        if row.height:
-            row.height = int(row.height * 0.8)
-    
     # Ensure header cells use 12pt font
     header_cells = [
         (0, 0),
@@ -1513,22 +1438,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     for r, c in header_cells:
         r_idx = r + extra_reqs if r >= 11 else r
         set_cell_font(table.cell(r_idx, c), 12)
-
-    # Update header text with requested line breaks
-    for c in range(2, 5):
-        cell = table.cell(3, c)
-        cell.text = "3. 신청 유형\n(AR, IR, Cmin, Cmaj 중 선택)"
-        set_cell_font(cell, 12)
-    for c in range(0, 3):
-        cell = table.cell(5, c)
-        cell.text = "4. 충족조건"
-        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-        set_cell_font(cell, 12)
-    for c in [3, 4]:
-        cell = table.cell(5, c)
-        cell.text = "조건 충족 여부\n(○, X 중 선택)"
-        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-        set_cell_font(cell, 12)    
         
     # 1. 신청인: template rows 0-2, columns 2-4 hold the value area
     for r_idx, key in enumerate(["name", "site", "product"]):
@@ -1574,9 +1483,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
             cell = table.cell(row, c)
             cell.text = symbol
             set_cell_font(cell, 11)
-            if cell.paragraphs:
-                cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER    
-                
+
     # 5. 필요서류: rows 12-18 available
     doc_start = 12 + extra_reqs
     output2_text_list = output2_text_list[:15]
@@ -1602,52 +1509,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
 
     doc.save(file_path)
     return file_path
-
-def docx_to_pdf_bytes(docx_path):
-    """Convert docx file to PDF and return bytes."""
-    try:
-        from weasyprint import HTML
-    except OSError as e:
-        raise RuntimeError(
-            "WeasyPrint could not start because required system libraries are missing. "
-            "Please install WeasyPrint's dependencies."
-        ) from e
-
-    with open(docx_path, "rb") as docx_file:
-        result = mammoth.convert_to_html(docx_file)
-    html_content = result.value
-    with NamedTemporaryFile(delete=False, suffix=".pdf") as pdf_tmp:
-        HTML(string=html_content).write_pdf(pdf_tmp.name)
-        pdf_tmp.seek(0)
-        pdf_bytes = pdf_tmp.read()
-    os.remove(pdf_tmp.name)
-    return pdf_bytes
-
-
-def open_pdf_in_browser(pdf_bytes, print_after_open=False):
-    encoded = base64.b64encode(pdf_bytes).decode()
-    print_call = "setTimeout(() => { win.focus(); win.print(); }, 100);" if print_after_open else ""
-    js = f"""
-    <script>
-    const data = '{encoded}';
-    const byteCharacters = atob(data);
-    const byteNumbers = new Array(byteCharacters.length);
-    for (let i = 0; i < byteCharacters.length; i++) {{
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }}
-    const byteArray = new Uint8Array(byteNumbers);
-    const blob = new Blob([byteArray], {{type: 'application/pdf'}});
-    const url = URL.createObjectURL(blob);
-    const win = window.open('', '_blank');
-    const iframe = win.document.createElement('iframe');
-    iframe.style.width = '100%';
-    iframe.style.height = '100%';
-    iframe.src = url;
-    iframe.onload = function() {{ {print_call} }};
-    win.document.body.appendChild(iframe);
-    </script>
-    """
-    st.components.v1.html(js, height=0)
 
 # Step 8 begins
 if st.session_state.step == 8:
@@ -1678,21 +1539,9 @@ if st.session_state.step == 8:
     page = st.session_state.step8_page
     total_pages = len(page_list)
     current_key, current_idx = page_list[page]
-
-    # Always prepare an empty list for document texts
-    output2_text_list = []
-    
     # Render message when there is no matching result for this page
     if current_idx is None:
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            "<h5 style='text-align:center; font-size:85%'>「의약품 허가 후 제조방법변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-            unsafe_allow_html=True,
-        )
-        st.write(            
+        st.write(
             "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
             "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
             "범위에 해당하지 않는 것으로 확인됩니다."
@@ -1727,35 +1576,25 @@ if st.session_state.step == 8:
 
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-        pdf_bytes = docx_to_pdf_bytes(file_path)
-        os.remove(file_path)
-
-        col_left, col_right = st.columns([1, 1])
+    
+        col_left, col_right = st.columns(2)
         with col_left:
-            download_clicked = st.download_button(
+            st.download_button(
                 "📄 파일 다운로드",
                 file_bytes,
                 file_name=f"신청서_{current_key}_{current_idx}.docx",
             )
-            if download_clicked:
-                open_pdf_in_browser(pdf_bytes)
+        os.remove(file_path)
         with col_right:
-            st.markdown("<div style='text-align:right'>", unsafe_allow_html=True)
             if st.button("🖨 인쇄하기"):
-                open_pdf_in_browser(pdf_bytes, print_after_open=True)
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        # Page number immediately below the button row        
+                st.components.v1.html("<script>window.print();</script>", height=0)
+                
         st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+            "<h5 style='text-align:center'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
             unsafe_allow_html=True,
         )
-        st.markdown(
-            "<h5 style='text-align:center; font-size:85%'>「의약품 허가 후 제조방법변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-            unsafe_allow_html=True,
-        )
-        html = textwrap.dedent(            
+        
+        html = textwrap.dedent(
             f"""
 <style>
 table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
@@ -1765,29 +1604,29 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
 </style>
 <table>
   <tr>
-    <td class='title' rowspan='3' style='width:16%'>1. 신청인</td>
-    <td class='normal' style='width:25%'>성명</td>
-    <td colspan='3' style='width:59%'></td>
+    <td class='title' rowspan='3' style='width:11%'>1. 신청인</td>
+    <td class='normal' style='width:10%'>성명</td>
+    <td colspan='3' style='width:79%'></td>
   </tr>
   <tr>
-    <td class='normal' style='width:25%'>제조소(영업소) 명칭</td>
-    <td colspan='3' style='width:59%'></td>
+    <td class='normal'>제조소(영업소) 명칭</td>
+    <td colspan='3'></td>
   </tr>
   <tr>
-    <td class='normal' style='width:25%'>변경신청 제품명</td>
-    <td colspan='3' style='width:59%'></td>
+    <td class='normal'>변경신청 제품명</td>
+    <td colspan='3'></td>
   </tr>
   <tr>
-    <td class='title' colspan='2' style='width:51%'>2. 변경유형</td>
-    <td class='title' colspan='3' style='width:49%'>3. 신청 유형<br>(AR, IR, Cmin, Cmaj 중 선택)</td>
+    <td class='title' colspan='2'>2. 변경유형</td>
+    <td class='title' colspan='3'>3. 신청 유형(AR, IR, Cmin, Cmaj 중 선택)</td>
   </tr>
   <tr>
-    <td colspan='2' class='normal' style='width:51%'>{result["title_text"]}</td>
-    <td colspan='3' class='normal' style='width:49%'>{result["output_1_tag"]}</td>
+    <td colspan='2' class='normal'>{result["title_text"]}</td>
+    <td colspan='3' class='normal'>{result["output_1_tag"]}</td>
   </tr>
   <tr>
-    <td class='title' colspan='3' style='width:60%'>4. 충족조건</td>
-    <td class='title' colspan='2' style='width:40%'>조건 충족 여부(○, X 중 선택)</td>
+    <td class='title' colspan='3'>4. 충족조건</td>
+    <td class='title' colspan='2'>조건 충족 여부(○, X 중 선택)</td>
   </tr>
 """
         )
@@ -1802,28 +1641,30 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
             else:
                 text = ""
                 symbol = ""
-            html += f"<tr><td colspan='3' class='normal' style='text-align:left; width:60%'>{text}</td><td colspan='2' class='normal' style='width:40%'>{symbol}</td></tr>"
+            html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td><td colspan='2' class='normal'>{symbol}</td></tr>"
 
         html += textwrap.dedent(
             """
   <tr>
-    <td class='title' colspan='3' style='width:52%'>5. 필요서류 (해당하는 필요서류 기재)</td>
+    <td class='title' colspan='3'>5. 필요서류 (해당하는 필요서류 기재)</td>
     <td class='title' style='width:8%'>구비 여부<br>(○, X 중 선택)</td>
-    <td class='title' style='width:40%'>해당 페이지 표시</td>
+    <td class='title' style='width:13%'>해당 페이지 표시</td>
   </tr>
 """
         )
-        max_docs = max(5, len(output2_text_list))
-        for i in range(max_docs):
-            line = output2_text_list[i] if i < len(output2_text_list) else ""
-            html += (
-                f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td>"
-                f"<td class='normal'></td><td class='normal'></td></tr>"
-            )
-        html += "</table>"
-        st.markdown(html, unsafe_allow_html=True)
+    max_docs = max(5, len(output2_text_list))
+    for i in range(max_docs):
+        line = output2_text_list[i] if i < len(output2_text_list) else ""
+        html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td><td class='normal'></td><td class='normal'></td></tr>"
+    html += "</table>"
+    st.markdown(html, unsafe_allow_html=True)
 
-    # Navigation controls visible on every Step 8 page
+    # Display page number and navigation for all pages
+    st.markdown(
+        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+        unsafe_allow_html=True,
+    )
+
     nav_left, nav_right = st.columns(2)
     with nav_left:
         if st.button("⬅ 이전"):
@@ -1836,5 +1677,4 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     with nav_right:
         if st.button("다음 ➡") and st.session_state.step8_page < total_pages - 1:
             st.session_state.step8_page += 1
-
 
