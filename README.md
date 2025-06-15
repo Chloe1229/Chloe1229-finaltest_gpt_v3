@@ -45,11 +45,23 @@ File "/mount/src/finaltest_gpt_v2/step1_to_8_step8_final_.py", line 1655, in <mo
 - 구비 여부 (○, X 중 선택) : '구비 여부\n(○, X 중 선택)'으로 줄바꿈을 적용하고, 열 너비는 구비 여부\n(○, X 중 선택)'이 딱 들어갈 너비 정도로만 하겠습니다. 
 - 해당 페이지 표시 : '조건 충족 여부(○, X 중 선택)'의 너비와 동일하게 하겠습니다.
 
-## WeasyPrint 시스템 라이브러리 설치
-WeasyPrint는 GTK 관련 라이브러리에 의존합니다. 이러한 라이브러리가 없으면 PDF 생성 및 인쇄가 실패합니다. 다음 라이브러리를 설치하세요.
-```배쉬
-sudo apt-get 업데이트
-sudo apt-get install libpango-1.0-0 libgdk-pixbuf2.0-0
-pip로 weasyprint 설치
+## 의존성 설치
+프로젝트에서 필요한 파이썬 패키지는 `requirements.txt`에 정의되어 있습니다. 다음 명령으로 한 번에 설치할 수 있습니다.
+
+```bash
+pip install -r requirements.txt
 ```
 
+WeasyPrint 기능을 사용하려면 추가 시스템 라이브러리도 필요합니다. Ubuntu 기반 환경에서는 아래 명령으로 설치합니다.
+
+```bash
+sudo apt-get update
+sudo apt-get install libpango-1.0-0 libgdk-pixbuf2.0-0
+```
+
+## 테스트 실행
+모든 의존성을 설치한 후 `pytest` 명령으로 테스트 스위트를 실행할 수 있습니다.
+
+```bash
+pytest
+```
