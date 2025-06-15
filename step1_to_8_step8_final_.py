@@ -1684,14 +1684,14 @@ if st.session_state.step == 8:
     
     # Render message when there is no matching result for this page
     if current_idx is None:
+        st.markdown(
+            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+            unsafe_allow_html=True,
+        )
         st.write(
             "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
             "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
             "범위에 해당하지 않는 것으로 확인됩니다."
-        )
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
         )
     else:
         result = step7_results[current_key][current_idx]
@@ -1738,6 +1738,7 @@ if st.session_state.step == 8:
         with col_right:
             st.markdown("<div style='text-align:right'>", unsafe_allow_html=True)
             if st.button("🖨 인쇄하기"):
+                open_pdf_in_browser(pdf_bytes, print_after_open=True)
 
             st.markdown("</div>", unsafe_allow_html=True)
         st.markdown(
