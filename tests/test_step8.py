@@ -42,8 +42,7 @@ def test_create_application_docx_basic(tmp_path):
     generated = Document(file_path)
     table = generated.tables[0]
 
-    template = Document('제조방법변경 신청양식_empty_.docx')
-    expected_widths = [col.width for col in template.tables[0].columns]
+    expected_widths = [865505, 1826260, 1019810, 1152525, 1817370]
     assert [col.width for col in table.columns] == expected_widths
 
     assert table.cell(4, 0).text == '변경A'
