@@ -1745,6 +1745,8 @@ if st.session_state.step == 8:
                 open_pdf_in_browser(pdf_bytes, print_after_open=True)
 
             st.markdown("</div>", unsafe_allow_html=True)
+
+        # Page number immediately below the button row        
         st.markdown(
             f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
             unsafe_allow_html=True,
