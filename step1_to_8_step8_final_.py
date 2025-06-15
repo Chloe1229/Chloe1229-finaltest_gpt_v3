@@ -8,7 +8,6 @@ import textwrap
 import re
 import base64
 import mammoth
-from weasyprint import HTML
 
 
 # ===== 초기 상태 정의 =====
@@ -1606,6 +1605,14 @@ def create_application_docx(current_key, result, requirements, selections, outpu
 
 def docx_to_pdf_bytes(docx_path):
     """Convert docx file to PDF and return bytes."""
+    try:
+        from weasyprint import HTML
+    except OSError as e:
+        raise RuntimeError(
+            "WeasyPrint could not start because required system libraries are missing. "
+            "Please install WeasyPrint's dependencies."
+        ) from e
+
     with open(docx_path, "rb") as docx_file:
         result = mammoth.convert_to_html(docx_file)
     html_content = result.value
