@@ -1715,7 +1715,7 @@ if st.session_state.step == 8:
         pdf_bytes = docx_to_pdf_bytes(file_path)
         os.remove(file_path)
 
-        col_left, col_right = st.columns(2)
+        col_left, col_right = st.columns([1, 1])
         with col_left:
             download_clicked = st.download_button(
                 "📄 파일 다운로드",
@@ -1725,9 +1725,11 @@ if st.session_state.step == 8:
             if download_clicked:
                 open_pdf_in_browser(pdf_bytes)
         with col_right:
+            st.markdown("<div style='text-align:right'>", unsafe_allow_html=True)
             if st.button("🖨 인쇄하기"):
                 open_pdf_in_browser(pdf_bytes, print_after_open=True)
-        
+                
+            st.markdown("</div>", unsafe_allow_html=True)
         html = textwrap.dedent(
             f"""
 <style>
