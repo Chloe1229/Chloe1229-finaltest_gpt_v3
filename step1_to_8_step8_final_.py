@@ -1738,9 +1738,12 @@ if st.session_state.step == 8:
         with col_right:
             st.markdown("<div style='text-align:right'>", unsafe_allow_html=True)
             if st.button("🖨 인쇄하기"):
-                open_pdf_in_browser(pdf_bytes, print_after_open=True)
-                
+
             st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+            unsafe_allow_html=True,
+        )                
         html = textwrap.dedent(
             f"""
 <style>
