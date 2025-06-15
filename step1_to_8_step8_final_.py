@@ -1805,16 +1805,15 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         html += "</table>"
         st.markdown(html, unsafe_allow_html=True)
 
-        st.markdown(
+    st.markdown(
         f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
         unsafe_allow_html=True,
     )
 
     st.markdown(
-        "<h5 style='text-align:center; font-size:85%'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+        "<h5 style='text-align:center; font-size:85%'>「의약품 허가 후 제조방법변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
         unsafe_allow_html=True,
     )
-
 
     nav_left, nav_right = st.columns(2)
     with nav_left:
