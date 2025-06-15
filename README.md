@@ -60,8 +60,12 @@ sudo apt-get install libpango-1.0-0 libgdk-pixbuf2.0-0
 ```
 
 ## 테스트 실행
-모든 의존성을 설치한 후 `pytest` 명령으로 테스트 스위트를 실행할 수 있습니다.
+테스트를 실행하기 전에 위에서 소개한 파이썬 패키지와 WeasyPrint 의존성을 먼저 설치해야 합니다.
+다음 명령들을 순서대로 실행한 뒤 `pytest`를 호출하세요.
 
 ```bash
+pip install -r requirements.txt
+sudo apt-get update
+sudo apt-get install libpango-1.0-0 libgdk-pixbuf2.0-0
 pytest
 ```
