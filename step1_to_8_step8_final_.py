@@ -1821,6 +1821,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         html += "</table>"
         st.markdown(html, unsafe_allow_html=True)
 
+    # Navigation controls visible on every Step 8 page
     nav_left, nav_right = st.columns(2)
     with nav_left:
         if st.button("⬅ 이전"):
