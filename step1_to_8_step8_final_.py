@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import streamlit as st
 from docx import Document
 from docx.shared import Pt
@@ -1710,7 +1711,7 @@ if st.session_state.step == 8:
             html_preview = mammoth.convert_to_html(docx_file).value
         html_b64 = base64.b64encode(html_preview.encode("utf-8")).decode("utf-8")
 
-        col_left, col_right = st.columns(2)
+        col_left, col_right = st.columns([1, 1])
         with col_left:
             st.download_button(
                 "📄 파일 다운로드",
@@ -1720,19 +1721,21 @@ if st.session_state.step == 8:
         os.remove(file_path)
         with col_right:
             if st.button("🖨 인쇄하기"):
-                st.components.v1.html(
-                    f"""
-                        <script>
-                        var html = atob('{html_b64}');
-                        var w = window.open('', '_blank');
-                        w.document.write(html);
-                        w.document.close();
-                        w.focus();
-                        w.print();
-                        </script>
-                        """,
-                    height=0,
-                )
+                script = f"""
+                var w = window.open('data:text/html;base64,{html_b64}', '_blank');
+                w.addEventListener('load', () => w.print());
+                """
+                st.components.v1.html(f"<script>{script}</script>", height=0)
+
+        st.markdown(
+            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
+            unsafe_allow_html=True,
+        )
 
         # Build application HTML
         html = textwrap.dedent(
@@ -1761,8 +1764,14 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td class='title' colspan='2' style='width:51%'>2. 변경유형</td>
     <td class='title' colspan='3'>3. 신청 유형<br>(AR, IR, Cmin, Cmaj 중 선택)</td>
   </tr>
-  <tr>
+"""
+        )
 
+        req_items = list(requirements.items())
+        max_reqs = max(5, min(15, len(req_items)))
+        for idx in range(max_reqs):
+            if idx < len(req_items):
+                rk, text = req_items[idx]
                 state = selections.get(f"{current_key}_req_{rk}", "")
                 symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
             else:
@@ -1787,17 +1796,19 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
 
         html += "</table>"
         st.markdown(html, unsafe_allow_html=True)
+    else:
+        st.write(message_text)
 
-    # Row 2: page number and title visible on every page
-    st.markdown(
-        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-        unsafe_allow_html=True,
-    )
+    else:
+        st.markdown(
+            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+            unsafe_allow_html=True,
+        )
 
-    st.markdown(
-        "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
-        unsafe_allow_html=True,
-    )
+        st.markdown(
+            "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
+            unsafe_allow_html=True,
+        )
 
     # Navigation for all pages
     nav_left, nav_right = st.columns(2)
