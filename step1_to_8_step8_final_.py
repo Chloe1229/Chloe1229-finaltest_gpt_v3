@@ -1462,11 +1462,17 @@ def create_application_docx(
 
     # Adjust column widths exactly as requested
     col_widths = [col.width for col in table.columns]
+
     table.columns[0].width = int(col_widths[0] * 4 / 7)  # 1. 신청인
     table.columns[1].width = int(col_widths[1] * 1.3)  # 성명/제조소/제품명
-    table.columns[2].width = int(col_widths[2] * 1.5)  # 2. 변경유형
-    table.columns[3].width = int(col_widths[3] * 1.5)  # 4. 충족조건과 동일
-    table.columns[4].width = int(col_widths[4] * 1.1)  # 해당 페이지 표시
+
+    change_width = int(col_widths[2] * 1.5)  # 2. 변경유형
+    table.columns[2].width = change_width
+
+    table.columns[3].width = change_width  # 4. 충족조건
+
+    table.columns[4].width = int(col_widths[4] * 1.1)  # 필요서류 영역
+    table.columns[4].width = table.columns[3].width  # 해당 페이지 표시와 동일 너비
 
     # Ensure header cells use 12pt font
     header_cells = [
