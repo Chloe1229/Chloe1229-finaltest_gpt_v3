@@ -1424,14 +1424,13 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
 
-    # Adjust column widths according to specification
+    # Adjust column widths exactly as requested
     col_widths = [col.width for col in table.columns]
-    table.columns[0].width = int(col_widths[0] * 4 / 7)
-    table.columns[1].width = int(col_widths[1] * 1.3)
-    table.columns[2].width = int(col_widths[2] * 1.5)
-    narrowed = int(table.columns[3].width * 0.8)
-    table.columns[3].width = narrowed
-    table.columns[4].width = narrowed
+    table.columns[0].width = int(col_widths[0] * 4 / 7)     # 1. 신청인
+    table.columns[1].width = int(col_widths[1] * 1.3)       # 성명/제조소/제품명
+    table.columns[2].width = int(col_widths[2] * 1.5)       # 2. 변경유형
+    table.columns[3].width = int(col_widths[3] * 1.5)       # 4. 충족조건과 동일
+    table.columns[4].width = int(col_widths[4] * 1.1)       # 해당 페이지 표시
 
     # Ensure header cells use 12pt font
     header_cells = [
@@ -1451,17 +1450,33 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         r_idx = r + extra_reqs if r >= 11 else r
         set_cell_font(table.cell(r_idx, c), 12)
 
-    # Apply header text adjustments with line breaks
+    # Apply header text adjustments with line breaks and vertical centering
     for c in [2, 3, 4]:
-        table.cell(3, c).text = "3. 신청 유형\n(AR, IR, Cmin, Cmaj 중 선택)"
-        set_cell_font(table.cell(3, c), 12)
+        cell = table.cell(3, c)
+        cell.text = "3. 신청 유형\n(AR, IR, Cmin, Cmaj 중 선택)"
+        for p in cell.paragraphs:
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        set_cell_font(cell, 12)
+
     for c in [3, 4]:
         cell = table.cell(5, c)
         cell.text = "조건 충족 여부\n(○, X 중 선택)"
+        for p in cell.paragraphs:
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         set_cell_font(cell, 12)
+
     for c in [0, 1, 2]:
         table.cell(5, c).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+
+    req_header_row = 11 + extra_reqs
+    cell = table.cell(req_header_row, 3)
+    cell.text = "구비 여부\n(○, X 중 선택)"
+    for p in cell.paragraphs:
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    set_cell_font(cell, 12)
         
     # 1. 신청인: template rows 0-2, columns 2-4 hold the value area
     for r_idx, key in enumerate(["name", "site", "product"]):
@@ -1509,6 +1524,9 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         for c in [3, 4]:
             cell = table.cell(row, c)
             cell.text = symbol
+            for p in cell.paragraphs:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             set_cell_font(cell, 11)
 
     # 5. 필요서류: rows 12-18 available
@@ -1529,9 +1547,15 @@ def create_application_docx(current_key, result, requirements, selections, outpu
             set_cell_font(cell, 11)
         cell = table.cell(row, 3)
         cell.text = ""
+        for p in cell.paragraphs:
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         set_cell_font(cell, 11)
         cell = table.cell(row, 4)
         cell.text = ""
+        for p in cell.paragraphs:
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         set_cell_font(cell, 11)
 
     # Reduce all row heights
@@ -1583,9 +1607,8 @@ if st.session_state.step == 8:
     else:
         result = step7_results[current_key][current_idx]
         requirements = step6_items.get(current_key, {}).get("requirements", {})
-        if not result.get("output_1_tag") or not result.get("output_2_text"):
-            st.write(message_text)
-        else:
+        outputs_present = bool(result.get("output_1_tag")) and bool(result.get("output_2_text"))
+        if outputs_present:
             
             
             selections = {
@@ -1611,44 +1634,50 @@ if st.session_state.step == 8:
                     file_path,
                 )
 
-            with open(file_path, "rb") as f:
-            file_bytes = f.read()
+        with open(file_path, "rb") as f:
+                file_bytes = f.read()
 
-        with open(file_path, "rb") as docx_file:
-            html_preview = mammoth.convert_to_html(docx_file).value
-        html_b64 = base64.b64encode(html_preview.encode("utf-8")).decode("utf-8")
-    
-        col_left, _, col_right = st.columns([1, 6, 1])
-        with col_left:
-            st.download_button(
-                "📄 파일 다운로드",
-                file_bytes,
-                file_name=f"신청서_{current_key}_{current_idx}.docx",
-            )
-        os.remove(file_path)
-        with col_right:
-            if st.button("🖨 인쇄하기"):
-                st.components.v1.html(
-                    f"""
-                    <script>
-                    var html = atob('{html_b64}');
-                    var w = window.open('', '_blank');
-                    w.document.write(html);
-                    w.document.close();
-                    w.focus();
-                    w.print();
-                    </script>
-                    """,
-                    height=0,
+            with open(file_path, "rb") as docx_file:
+                html_preview = mammoth.convert_to_html(docx_file).value
+            html_b64 = base64.b64encode(html_preview.encode("utf-8")).decode("utf-8")
+
+        col_left, col_right = st.columns(2)
+            with col_left:
+                st.download_button(
+                    "📄 파일 다운로드",
+                    file_bytes,
+                    file_name=f"신청서_{current_key}_{current_idx}.docx",
                 )
-                
+            os.remove(file_path)
+            with col_right:
+                if st.button("🖨 인쇄하기"):
+                    st.components.v1.html(
+                        f"""
+                        <script>
+                        var html = atob('{html_b64}');
+                        var w = window.open('', '_blank');
+                        w.document.write(html);
+                        w.document.close();
+                        w.focus();
+                        w.print();
+                        </script>
+                        """,
+                        height=0,
+                    )
+
+
         st.markdown(
-            "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
             unsafe_allow_html=True,
         )
-        
-        html = textwrap.dedent(
-            f"""
+
+        st.markdown(
+            "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
+                unsafe_allow_html=True,
+            )
+
+            html = textwrap.dedent(
+                f"""
 <style>
 table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
 td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }}
@@ -1682,19 +1711,19 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td class='title' colspan='2'>조건 충족 여부(○, X 중 선택)</td>
   </tr>
 """
-        )
+            )
 
-            req_items = list(requirements.items())
-            max_reqs = max(5, min(15, len(req_items)))
-            for idx in range(max_reqs):
-                if idx < len(req_items):
-                    rk, text = req_items[idx]
-                    state = selections.get(f"{current_key}_req_{rk}", "")
-                    symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
-                else:
-                    text = ""
-                    symbol = ""
-                html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td><td colspan='2' class='normal'>{symbol}</td></tr>"
+        req_items = list(requirements.items())
+        max_reqs = max(5, min(15, len(req_items)))
+        for idx in range(max_reqs):
+            if idx < len(req_items):
+                rk, text = req_items[idx]
+                state = selections.get(f"{current_key}_req_{rk}", "")
+                symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
+            else:
+                text = ""
+                symbol = ""
+            html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td><td colspan='2' class='normal'>{symbol}</td></tr>"
 
             html += textwrap.dedent(
                 """
@@ -1712,12 +1741,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
             html += "</table>"
             st.markdown(html, unsafe_allow_html=True)
 
-    # Display page number and navigation for all pages
-    st.markdown(
-        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-        unsafe_allow_html=True,
-    )
-
+    # Navigation for all pages
     nav_left, nav_right = st.columns(2)
     with nav_left:
         if st.button("⬅ 이전"):
@@ -1730,4 +1754,3 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     with nav_right:
         if st.button("다음 ➡") and st.session_state.step8_page < total_pages - 1:
             st.session_state.step8_page += 1
-
