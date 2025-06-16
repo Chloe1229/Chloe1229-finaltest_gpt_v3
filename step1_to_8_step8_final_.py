@@ -1472,8 +1472,13 @@ def create_application_docx(
 
     table.columns[3].width = change_width  # 4. 충족조건
 
-    table.columns[4].width = int(col_widths[4] * 1.1)  # 필요서류 영역
-    table.columns[4].width = table.columns[3].width  # 해당 페이지 표시와 동일 너비
+    # Width adjustments for "필요서류" and "해당 페이지 표시" columns
+    if len(table.columns) > 5:
+        table.columns[4].width = int(col_widths[4] * 1.1)  # 5. 필요서류
+        table.columns[5].width = table.columns[3].width  # 해당 페이지 표시 = 조건 충족 여부
+    elif len(table.columns) > 4:
+        # Templates with 5 columns use the last column for "해당 페이지 표시"
+        table.columns[4].width = table.columns[3].width
 
     # Ensure header cells use 12pt font
     header_cells = [
@@ -1656,6 +1661,16 @@ if st.session_state.step == 8:
     total_pages = len(page_list)
     current_key, current_idx = page_list[page]
 
+    st.markdown(
+        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
+        unsafe_allow_html=True,
+    )
+
     message_text = (
         "해당 변경사항에 대한 충족조건을 고려하였을 때, "
         "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는 범위에 해당하지 않는 것으로 확인됩니다."
@@ -1799,16 +1814,15 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     else:
         st.write(message_text)
 
-    else:
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+        unsafe_allow_html=True,
+    )
 
-        st.markdown(
-            "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
+        unsafe_allow_html=True,
+    )
 
     # Navigation for all pages
     nav_left, nav_right = st.columns(2)
