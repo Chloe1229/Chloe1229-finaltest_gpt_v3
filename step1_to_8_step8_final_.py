@@ -1423,6 +1423,8 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # Load template to preserve all styles and merges
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
+    table.autofit = False
+
 
     # Adjust column widths exactly as requested
     col_widths = [col.width for col in table.columns]
@@ -1448,8 +1450,12 @@ def create_application_docx(current_key, result, requirements, selections, outpu
 
     for r, c in header_cells:
         r_idx = r + extra_reqs if r >= 11 else r
-        set_cell_font(table.cell(r_idx, c), 12)
-
+        cell = table.cell(r_idx, c)
+        set_cell_font(cell, 12)
+        for p in cell.paragraphs:
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        
     # Apply header text adjustments with line breaks and vertical centering
     for c in [2, 3, 4]:
         cell = table.cell(3, c)
@@ -1531,7 +1537,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
 
     # 5. 필요서류: rows 12-18 available
     doc_start = 12 + extra_reqs
-    output2_text_list = output2_text_list[:15]
     max_docs = max(5, len(output2_text_list))
     extra_docs = max(0, max_docs - 7)
     for i in range(extra_docs):
@@ -1602,15 +1607,19 @@ if st.session_state.step == 8:
         "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는 범위에 해당하지 않는 것으로 확인됩니다."
     )
     
-    if current_idx is None:
-        st.write(message_text)
-    else:
+    file_path = file_bytes = html_b64 = None
+    outputs_present = False
+    result = None
+    requirements = {}
+
+    if current_idx is not None:
         result = step7_results[current_key][current_idx]
         requirements = step6_items.get(current_key, {}).get("requirements", {})
         outputs_present = bool(result.get("output_1_tag")) and bool(result.get("output_2_text"))
-        if outputs_present:
-            
-            
+
+    if outputs_present:
+
+
             selections = {
                 f"{current_key}_req_{rk}": step6_selections.get(f"{current_key}_req_{rk}", "")
                 for rk in requirements
@@ -1634,14 +1643,14 @@ if st.session_state.step == 8:
                     file_path,
                 )
 
-        with open(file_path, "rb") as f:
+            with open(file_path, "rb") as f:
                 file_bytes = f.read()
 
             with open(file_path, "rb") as docx_file:
                 html_preview = mammoth.convert_to_html(docx_file).value
             html_b64 = base64.b64encode(html_preview.encode("utf-8")).decode("utf-8")
 
-        col_left, col_right = st.columns(2)
+            col_left, col_right = st.columns(2)
             with col_left:
                 st.download_button(
                     "📄 파일 다운로드",
@@ -1665,14 +1674,14 @@ if st.session_state.step == 8:
                         height=0,
                     )
 
+        # Row 2: page number
+            st.markdown(
+                f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+                unsafe_allow_html=True,
+            )
 
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
+            st.markdown(
+                "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
                 unsafe_allow_html=True,
             )
 
@@ -1711,7 +1720,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td class='title' colspan='2'>조건 충족 여부(○, X 중 선택)</td>
   </tr>
 """
-            )
+        )
 
         req_items = list(requirements.items())
         max_reqs = max(5, min(15, len(req_items)))
@@ -1725,21 +1734,23 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
                 symbol = ""
             html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td><td colspan='2' class='normal'>{symbol}</td></tr>"
 
-            html += textwrap.dedent(
-                """
+        html += textwrap.dedent(
+            """
   <tr>
     <td class='title' colspan='3'>5. 필요서류 (해당하는 필요서류 기재)</td>
-    <td class='title' style='width:1%; white-space:nowrap;'>구비 여부<br>(○, X 중 선택)</td>
-    <td class='title'>해당 페이지 표시</td>
+    <td class='title' style='width:8%; white-space:nowrap;'>구비 여부<br>(○, X 중 선택)</td>
+    <td class='title' style='width:13%'>해당 페이지 표시</td>
   </tr>
 """
-            )
-            max_docs = max(5, len(output2_text_list))
-            for i in range(max_docs):
-                line = output2_text_list[i] if i < len(output2_text_list) else ""
-                html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td><td class='normal'></td><td class='normal'></td></tr>"
-            html += "</table>"
-            st.markdown(html, unsafe_allow_html=True)
+        )
+
+        max_docs = max(5, len(output2_text_list))
+        for i in range(max_docs):
+            line = output2_text_list[i] if i < len(output2_text_list) else ""
+            html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td><td class='normal'></td><td class='normal'></td></tr>"
+
+        html += "</table>"
+        st.markdown(html, unsafe_allow_html=True)
 
     # Navigation for all pages
     nav_left, nav_right = st.columns(2)
