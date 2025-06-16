@@ -1584,7 +1584,7 @@ def create_application_docx(
         row = 6 + i
         if i < len(req_items):
             rk, text = req_items[i]
-            state = selections.get(str(rk), "")
+            state = selections.get(f"{current_key}_req_{rk}", "")
             symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
         else:
             text = ""
@@ -1629,11 +1629,11 @@ def create_application_docx(
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         set_cell_font(cell, 11)
 
-    # Reduce all row heights
+    # Reduce all row heights but allow content to expand the row if needed
     for row in table.rows:
         height = row.height or 360000
         row.height = int(height * 0.8)
-        row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+        row.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
 
     doc.save(file_path)
     return file_path
@@ -1689,11 +1689,9 @@ if st.session_state.step == 8:
 
     if outputs_present:
 
-        selections = {
-            str(rk): step6_selections.get(f"{current_key}_req_{str(rk)}", "")
-
-            for rk in requirements
-        }
+        # Use the raw Step6 selections so keys remain in the
+        # "{current_key}_req_{rk}" format
+        selections = step6_selections
         output2_lines = [
             line.strip()
             for line in result.get("output_2_text", "").split("\n")
@@ -1804,7 +1802,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         for idx in range(max_reqs):
             if idx < len(req_items):
                 rk, text = req_items[idx]
-                state = selections.get(str(rk), "")
+                state = selections.get(f"{current_key}_req_{rk}", "")
                 symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
             else:
                 text = ""
