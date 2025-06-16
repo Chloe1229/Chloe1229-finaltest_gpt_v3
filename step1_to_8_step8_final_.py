@@ -1434,11 +1434,14 @@ if st.session_state.step == 7:
 # ===== Step8: 신청양식 PDF 생성 =====
 
 
-def set_cell_font(cell, font_size=11):
+def set_cell_font(cell, font_size=11, line_spacing=None):
+    """Apply font size while preserving the template's line spacing."""
     for paragraph in cell.paragraphs:
+        # Keep the template's spacing unless explicitly overridden
+        if line_spacing is not None:
+            paragraph.paragraph_format.line_spacing = line_spacing
         for run in paragraph.runs:
             run.font.size = Pt(font_size)
-        paragraph.paragraph_format.line_spacing = 1.0
 
 
 def clone_row(table, row_idx):
@@ -1464,8 +1467,11 @@ def create_application_docx(
     # Adjust column widths exactly as requested
     col_widths = [col.width for col in table.columns]
 
-    table.columns[0].width = int(col_widths[0] * 4 / 7)  # 1. 신청인
-    table.columns[1].width = int(col_widths[1] * 1.3)  # 성명/제조소/제품명
+    # Reduce first column width a little more to free space for the second
+    # column which holds "제조소(영업소) 명칭". This prevents the text from
+    # wrapping in that column.
+    table.columns[0].width = int(col_widths[0] * 3 / 7)  # 1. 신청인
+    table.columns[1].width = int(col_widths[1] * 1.4)  # 성명/제조소/제품명
 
     change_width = int(col_widths[2] * 1.5)  # 2. 변경유형
     table.columns[2].width = change_width
@@ -1577,7 +1583,7 @@ def create_application_docx(
         row = 6 + i
         if i < len(req_items):
             rk, text = req_items[i]
-            state = selections.get(f"{current_key}_req_{rk}", "")
+            state = selections.get(str(rk), "")
             symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
         else:
             text = ""
@@ -1683,22 +1689,28 @@ if st.session_state.step == 8:
     if outputs_present:
 
         selections = {
-            f"{current_key}_req_{rk}": step6_selections.get(
-                f"{current_key}_req_{rk}", ""
-            )
+            str(rk): step6_selections.get(f"{current_key}_req_{str(rk)}", "")
+
             for rk in requirements
         }
-        output2_text_list = [
+        output2_lines = [
             line.strip()
             for line in result.get("output_2_text", "").split("\n")
             if line.strip()
         ]
-        for idx, line in enumerate(output2_text_list):
-            if re.match(r"^\d+[.)]", line):
-                output2_text_list = output2_text_list[idx:]
+
+        start_idx = 0
+        for i, line in enumerate(output2_lines):
+            if "필요서류는 다음과 같습니다." in line:
+                start_idx = i
                 break
-        else:
-            output2_text_list = []
+        output2_text_list = output2_lines[start_idx:]
+
+        for idx, line in enumerate(output2_text_list[1:], start=1):
+            if re.match(r"^\d+[.)]", line):
+                output2_text_list = [output2_text_list[0]] + output2_text_list[idx:]
+                break
+
         output2_text_list = output2_text_list[:15]
         with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
             file_path = tmp.name
@@ -1791,7 +1803,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         for idx in range(max_reqs):
             if idx < len(req_items):
                 rk, text = req_items[idx]
-                state = selections.get(f"{current_key}_req_{rk}", "")
+                state = selections.get(str(rk), "")
                 symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
             else:
                 text = ""
