@@ -1638,9 +1638,10 @@ if st.session_state.step == 8:
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('<div class="right-btn">', unsafe_allow_html=True)
         print_clicked = st.button("🖨 인쇄하기")
-        st.markdown('</div></div>', unsafe_allow_html=True)
+
+        if print_clicked:
             pdf_path = file_path.replace(".docx", ".pdf")
-            convert_docx_to_pdf(file_path, pdf_path)       
+            convert_docx_to_pdf(file_path, pdf_path)
             with open(pdf_path, "rb") as pf:
                 b64 = base64.b64encode(pf.read()).decode()
             st.components.v1.html(
@@ -1655,8 +1656,6 @@ if st.session_state.step == 8:
 
             os.remove(file_path)
             os.remove(pdf_path)
-
-        st.markdown('</div></div>', unsafe_allow_html=True)
 
         html = textwrap.dedent(
             f"""
