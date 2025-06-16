@@ -1418,16 +1418,22 @@ def clone_row(table, row_idx):
         set_cell_font(cell, 11)
     return new_row
 
+def convert_docx_to_pdf(docx_path: str, pdf_path: str) -> str:
     """Convert a DOCX file to PDF using docx2pdf."""
     convert(docx_path, pdf_path)
     return pdf_path
-    
+
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
     # Load template to preserve all styles and merges
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
     # Adjust column widths according to additional_README ratios
-    width_ratios = [4/7, 1.3, 1.5, 1.5, 1.0]
+    # Column width adjustments from additional_README.md
+    # 1. 신청인: reduce to 4/7
+    # 성명/제조소(영업소) 명칭/변경신청 제품명: increase 1.3x
+    # 2. 변경유형, 3. 신청 유형: increase 1.5x
+    # 5. 필요서류: increase 1.1x
+    width_ratios = [4/7, 1.3, 1.5, 1.5, 1.1]    
     orig_widths = [col.width for col in table.columns]
     new_widths = [int(w * r) if w else None for w, r in zip(orig_widths, width_ratios)]
     for row in table.rows:
@@ -1561,12 +1567,11 @@ if st.session_state.step == 8:
     page = st.session_state.step8_page
     total_pages = len(page_list)
     current_key, current_idx = page_list[page]
-    # Determine if there is a matching result for this page
-    if current_idx is None:
-        html = None
-        result = None
 
-    else:
+    result = None
+    html = None
+
+    if current_idx is not None:
         result = step7_results[current_key][current_idx]
         requirements = step6_items.get(current_key, {}).get("requirements", {})
         missing_keys = [
@@ -1582,6 +1587,7 @@ if st.session_state.step == 8:
             f"{current_key}_req_{rk}": step6_selections.get(
                 f"{current_key}_req_{rk}", ""
             )
+            for rk in requirements
         }
         output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
         for idx, line in enumerate(output2_text_list):
@@ -1602,20 +1608,17 @@ if st.session_state.step == 8:
                 file_path,
             )
 
-        pdf_path = file_path.replace(".docx", ".pdf")
-        convert_docx_to_pdf(file_path, pdf_path)
-
         with open(file_path, "rb") as f:
             file_bytes = f.read()
 
         st.markdown(
             """
             <style>
-            .left-btn, .right-btn {
+            .left-btn, .right-btn, .nav-btn {
                 width: 150px;
                 white-space: nowrap;
             }
-            .btn-row {
+            .btn-row, .nav-row {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -1634,7 +1637,10 @@ if st.session_state.step == 8:
         )
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('<div class="right-btn">', unsafe_allow_html=True)
-        if st.button("🖨 인쇄하기"):
+        print_clicked = st.button("🖨 인쇄하기")
+        st.markdown('</div></div>', unsafe_allow_html=True)
+            pdf_path = file_path.replace(".docx", ".pdf")
+            convert_docx_to_pdf(file_path, pdf_path)       
             with open(pdf_path, "rb") as pf:
                 b64 = base64.b64encode(pf.read()).decode()
             st.components.v1.html(
@@ -1645,15 +1651,15 @@ if st.session_state.step == 8:
                 </script>
                 """,
                 height=0,
-                )
+            )
 
             os.remove(file_path)
             os.remove(pdf_path)
-        
-            st.markdown('</div></div>', unsafe_allow_html=True) 
-                
-            html = textwrap.dedent(
-                f"""
+
+        st.markdown('</div></div>', unsafe_allow_html=True)
+
+        html = textwrap.dedent(
+            f"""
 <style>
 table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
 td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }}
@@ -1710,11 +1716,12 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
   </tr>
 """
         )
-    max_docs = max(5, len(output2_text_list))
-    for i in range(max_docs):
-        line = output2_text_list[i] if i < len(output2_text_list) else ""
-        html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td><td class='normal'></td><td class='normal'></td></tr>"
-    html += "</table>"
+        max_docs = max(5, len(output2_text_list))
+        for i in range(max_docs):
+            line = output2_text_list[i] if i < len(output2_text_list) else ""
+            html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td><td class='normal'></td><td class='normal'></td></tr>"
+    if html is not None:
+        html += "</table>"
 
     st.markdown(
         f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
@@ -1735,18 +1742,16 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         st.markdown(html, unsafe_allow_html=True)
 
 
-    nav_left, nav_right = st.columns(2)
-    with nav_left:
-        if st.button("⬅ 이전"):
-            if page == 0:
-                st.session_state.step = 7
-                st.session_state.pop("step8_page", None)
-            else:
-                st.session_state.step8_page -= 1
-    with nav_right:
-        if st.button("다음 ➡") and page < total_pages - 1:
-            st.session_state.step8_page += 1
-
-
-
-
+    st.markdown('<div class="nav-row">', unsafe_allow_html=True)
+    st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
+    if st.button("⬅ 이전"):
+        if page == 0:
+            st.session_state.step = 7
+            st.session_state.pop("step8_page", None)
+        else:
+            st.session_state.step8_page -= 1
+    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
+    if st.button("다음 ➡") and page < total_pages - 1:
+        st.session_state.step8_page += 1
+    st.markdown('</div></div>', unsafe_allow_html=True)
