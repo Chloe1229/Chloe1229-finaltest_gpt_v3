@@ -1438,7 +1438,7 @@ def set_cell_font(cell, font_size=11):
     for paragraph in cell.paragraphs:
         for run in paragraph.runs:
             run.font.size = Pt(font_size)
-        paragraph.paragraph_format.line_spacing = 1.4
+        paragraph.paragraph_format.line_spacing = 1.0
 
 
 def clone_row(table, row_idx):
@@ -1470,15 +1470,16 @@ def create_application_docx(
     change_width = int(col_widths[2] * 1.5)  # 2. 변경유형
     table.columns[2].width = change_width
 
-    table.columns[3].width = change_width  # 4. 충족조건
-
+    condition_width = int(change_width * 0.6)  # 조건 충족 여부
+    table.columns[3].width = condition_width
+    
     # Width adjustments for "필요서류" and "해당 페이지 표시" columns
     if len(table.columns) > 5:
         table.columns[4].width = int(col_widths[4] * 1.1)  # 5. 필요서류
-        table.columns[5].width = table.columns[3].width  # 해당 페이지 표시 = 조건 충족 여부
+        table.columns[5].width = condition_width  # 해당 페이지 표시 = 조건 충족 여부
     elif len(table.columns) > 4:
         # Templates with 5 columns use the last column for "해당 페이지 표시"
-        table.columns[4].width = table.columns[3].width
+        table.columns[4].width = condition_width
 
     # Ensure header cells use 12pt font
     header_cells = [
@@ -1659,17 +1660,6 @@ if st.session_state.step == 8:
 
     page = st.session_state.step8_page
     total_pages = len(page_list)
-    current_key, current_idx = page_list[page]
-
-    st.markdown(
-        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
-        unsafe_allow_html=True,
-    )
 
     message_text = (
         "해당 변경사항에 대한 충족조건을 고려하였을 때, "
@@ -1742,6 +1732,17 @@ if st.session_state.step == 8:
                 """
                 st.components.v1.html(f"<script>{script}</script>", height=0)
 
+    st.markdown(
+        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
+        unsafe_allow_html=True,
+    )
+
+    if outputs_present:        
         # Build application HTML
         html = textwrap.dedent(
             f"""
@@ -1753,21 +1754,32 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
 </style>
 <table>
   <tr>
-    <td class='title' rowspan='3' style='width:16.5%'>1. 신청인</td>
+    <td class='title' rowspan='3' style='width:25%'>1. 신청인</td>
     <td class='normal' style='width:25%'>성명</td>
-    <td colspan='3' style='width:58.5%'></td>
+    <td colspan='3' style='width:62.5%'></td>
   </tr>
   <tr>
     <td class='normal' style='width:25%'>제조소(영업소) 명칭</td>
-    <td colspan='3' style='width:58.5%'></td>
+    <td colspan='3' style='width:62.5%'></td>
   </tr>
   <tr>
     <td class='normal' style='width:25%'>변경신청 제품명</td>
-    <td colspan='3' style='width:58.5%'></td>
+    <td colspan='3' style='width:62.5%'></td>
   </tr>
   <tr>
     <td class='title' colspan='2' style='width:51%'>2. 변경유형</td>
     <td class='title' colspan='3'>3. 신청 유형<br>(AR, IR, Cmin, Cmaj 중 선택)</td>
+
+  </tr>
+"""
+        )
+
+        html += textwrap.dedent(
+            """
+  <tr>
+    <td class='title' colspan='3'>4. 충족조건</td>
+    <td class='title'>조건 충족 여부<br>(○, X 중 선택)</td>
+    <td class='title'>해당 페이지 표시</td>    
   </tr>
 """
         )
@@ -1801,6 +1813,9 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
 
         html += "</table>"
         st.markdown(html, unsafe_allow_html=True)
+    else:
+        st.write(message_text)
+        file_bytes = html_b64 = None
 
     # Navigation for all pages
     nav_left, nav_right = st.columns(2)
