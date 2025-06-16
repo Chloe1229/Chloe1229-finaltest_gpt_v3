@@ -8,8 +8,7 @@ import os
 import textwrap
 import re
 import base64
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
+from docx2pdf import convert
 
 
 # ===== 초기 상태 정의 =====
@@ -1419,37 +1418,30 @@ def clone_row(table, row_idx):
         set_cell_font(cell, 11)
     return new_row
 
-def convert_docx_to_pdf(docx_path, pdf_path):
-    """Convert a DOCX file to a simple PDF using reportlab."""
-    doc = Document(docx_path)
-    c = canvas.Canvas(pdf_path, pagesize=A4)
-    width, height = A4
-    y = height - 40
-    # Render tables first (template mainly contains one table)
-    for table in doc.tables:
-        for row in table.rows:
-            row_text = "  ".join(cell.text.replace("\n", " ") for cell in row.cells)
-            c.drawString(40, y, row_text)
-            y -= 15
-            if y < 40:
-                c.showPage()
-                y = height - 40
-        y -= 20
-    # Render remaining paragraphs if any
-    for para in doc.paragraphs:
-        if para.text.strip():
-            c.drawString(40, y, para.text)
-            y -= 15
-            if y < 40:
-                c.showPage()
-                y = height - 40
-    c.save()
+    """Convert a DOCX file to PDF using docx2pdf."""
+    convert(docx_path, pdf_path)
     return pdf_path
     
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
     # Load template to preserve all styles and merges
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
+    # Adjust column widths according to additional_README ratios
+    width_ratios = [4/7, 1.3, 1.5, 1.5, 1.0]
+    orig_widths = [col.width for col in table.columns]
+    new_widths = [int(w * r) if w else None for w, r in zip(orig_widths, width_ratios)]
+    for row in table.rows:
+        for idx, width in enumerate(new_widths):
+            if width:
+                row.cells[idx].width = width
+
+    # Shrink row heights to 80% of the template values
+    for row in table.rows:
+        if row.height:
+            row.height = int(row.height * 0.8)
+
+    # Update header text with explicit line breaks
+    table.cell(3, 4).text = "3. 신청 유형\n(AR, IR, Cmin, Cmaj 중 선택)"
 
     # Ensure header cells use 12pt font
     header_cells = [
@@ -1460,7 +1452,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     ]
 
     req_items = list(requirements.items())
-    max_reqs = max(5, min(15, len(req_items)))
+    max_reqs = max(5, len(req_items))
     extra_reqs = max_reqs - 5
 
     doc_start = 12 + extra_reqs
@@ -1490,7 +1482,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         
     # 4. 충족조건: rows 6-10 available
     req_items = list(requirements.items())
-    max_reqs = max(5, min(15, len(req_items)))
+    max_reqs = max(5, len(req_items))
     extra_reqs = max_reqs - 5
     for i in range(extra_reqs):
         new_row = clone_row(table, 10 + i)
@@ -1577,11 +1569,19 @@ if st.session_state.step == 8:
     else:
         result = step7_results[current_key][current_idx]
         requirements = step6_items.get(current_key, {}).get("requirements", {})
-
+        missing_keys = [
+            rk for rk in requirements
+            if f"{current_key}_req_{rk}" not in step6_selections
+        ]
+        if missing_keys:
+            st.warning(
+                f"Missing selections for: {', '.join(missing_keys)}"
+            )
 
         selections = {
-            f"{current_key}_req_{rk}": step6_selections.get(f"{current_key}_req_{rk}", "")
-            for rk in requirements
+            f"{current_key}_req_{rk}": step6_selections.get(
+                f"{current_key}_req_{rk}", ""
+            )
         }
         output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
         for idx, line in enumerate(output2_text_list):
@@ -1607,33 +1607,53 @@ if st.session_state.step == 8:
 
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-        with open(pdf_path, "rb") as f:
-            pdf_bytes = f.read()
 
-        col_left, col_right = st.columns(2)
-        with col_left:
-            st.download_button(
-                "📄 파일 다운로드",
-                file_bytes,
-                file_name=f"신청서_{current_key}_{current_idx}.docx",
-            )
-        os.remove(file_path)
-        os.remove(pdf_path)
-        with col_right:
-            if st.button("🖨 인쇄하기"):
-                b64 = base64.b64encode(pdf_bytes).decode()
-                st.components.v1.html(
-                    f"""
-                    <script>
-                    var newWin = window.open('');
-                    newWin.document.write('<iframe src="data:application/pdf;base64,{b64}" style="width:100%;height:100%;border:none" onload="this.contentWindow.print()"></iframe>');
-                    </script>
-                    """,
-                    height=0,
-                )        
+        st.markdown(
+            """
+            <style>
+            .left-btn, .right-btn {
+                width: 150px;
+                white-space: nowrap;
+            }
+            .btn-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        st.markdown('<div class="btn-row">', unsafe_allow_html=True)
+        st.markdown('<div class="left-btn">', unsafe_allow_html=True)
+        st.download_button(
+            "📄 파일 다운로드",
+            file_bytes,
+            file_name=f"신청서_{current_key}_{current_idx}.docx",
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('<div class="right-btn">', unsafe_allow_html=True)
+        if st.button("🖨 인쇄하기"):
+            with open(pdf_path, "rb") as pf:
+                b64 = base64.b64encode(pf.read()).decode()
+            st.components.v1.html(
+                f"""
+                <script>
+                var newWin = window.open('');
+                newWin.document.write('<iframe src="data:application/pdf;base64,{b64}" style="width:100%;height:100%;border:none" onload="this.contentWindow.print()"></iframe>');
+                </script>
+                """,
+                height=0,
+                )
+
+            os.remove(file_path)
+            os.remove(pdf_path)
+        
+            st.markdown('</div></div>', unsafe_allow_html=True) 
                 
-        html = textwrap.dedent(
-            f"""
+            html = textwrap.dedent(
+                f"""
 <style>
 table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
 td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }}
@@ -1670,7 +1690,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         )
 
         req_items = list(requirements.items())
-        max_reqs = max(5, min(15, len(req_items)))
+        max_reqs = max(5, len(req_items))
         for idx in range(max_reqs):
             if idx < len(req_items):
                 rk, text = req_items[idx]
@@ -1697,11 +1717,11 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     html += "</table>"
 
     st.markdown(
-        "<h5 style='text-align:center'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
         unsafe_allow_html=True,
     )
     st.markdown(
-        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+        "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",        
         unsafe_allow_html=True,
     )
 
