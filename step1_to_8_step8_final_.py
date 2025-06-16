@@ -1742,16 +1742,6 @@ if st.session_state.step == 8:
                 """
                 st.components.v1.html(f"<script>{script}</script>", height=0)
 
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
-
-        st.markdown(
-            "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
-            unsafe_allow_html=True,
-        )
-
         # Build application HTML
         html = textwrap.dedent(
             f"""
@@ -1811,18 +1801,6 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
 
         html += "</table>"
         st.markdown(html, unsafe_allow_html=True)
-    else:
-        st.write(message_text)
-
-    st.markdown(
-        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown(
-        "<h5 style='text-align:center; font-size:0.85em'>신청양식 예시</h5>",
-        unsafe_allow_html=True,
-    )
 
     # Navigation for all pages
     nav_left, nav_right = st.columns(2)
