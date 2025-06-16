@@ -7,6 +7,9 @@ from tempfile import NamedTemporaryFile
 import os
 import textwrap
 import re
+import base64
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import A4
 
 
 # ===== 초기 상태 정의 =====
@@ -1415,6 +1418,33 @@ def clone_row(table, row_idx):
         cell.text = ""
         set_cell_font(cell, 11)
     return new_row
+
+def convert_docx_to_pdf(docx_path, pdf_path):
+    """Convert a DOCX file to a simple PDF using reportlab."""
+    doc = Document(docx_path)
+    c = canvas.Canvas(pdf_path, pagesize=A4)
+    width, height = A4
+    y = height - 40
+    # Render tables first (template mainly contains one table)
+    for table in doc.tables:
+        for row in table.rows:
+            row_text = "  ".join(cell.text.replace("\n", " ") for cell in row.cells)
+            c.drawString(40, y, row_text)
+            y -= 15
+            if y < 40:
+                c.showPage()
+                y = height - 40
+        y -= 20
+    # Render remaining paragraphs if any
+    for para in doc.paragraphs:
+        if para.text.strip():
+            c.drawString(40, y, para.text)
+            y -= 15
+            if y < 40:
+                c.showPage()
+                y = height - 40
+    c.save()
+    return pdf_path
     
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
     # Load template to preserve all styles and merges
@@ -1539,13 +1569,11 @@ if st.session_state.step == 8:
     page = st.session_state.step8_page
     total_pages = len(page_list)
     current_key, current_idx = page_list[page]
-    # Render message when there is no matching result for this page
+    # Determine if there is a matching result for this page
     if current_idx is None:
-        st.write(
-            "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
-            "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
-            "범위에 해당하지 않는 것으로 확인됩니다."
-        )
+        html = None
+        result = None
+
     else:
         result = step7_results[current_key][current_idx]
         requirements = step6_items.get(current_key, {}).get("requirements", {})
@@ -1574,9 +1602,14 @@ if st.session_state.step == 8:
                 file_path,
             )
 
+        pdf_path = file_path.replace(".docx", ".pdf")
+        convert_docx_to_pdf(file_path, pdf_path)
+
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-    
+        with open(pdf_path, "rb") as f:
+            pdf_bytes = f.read()
+
         col_left, col_right = st.columns(2)
         with col_left:
             st.download_button(
@@ -1585,15 +1618,20 @@ if st.session_state.step == 8:
                 file_name=f"신청서_{current_key}_{current_idx}.docx",
             )
         os.remove(file_path)
+        os.remove(pdf_path)
         with col_right:
             if st.button("🖨 인쇄하기"):
-                st.components.v1.html("<script>window.print();</script>", height=0)
+                b64 = base64.b64encode(pdf_bytes).decode()
+                st.components.v1.html(
+                    f"""
+                    <script>
+                    var newWin = window.open('');
+                    newWin.document.write('<iframe src="data:application/pdf;base64,{b64}" style="width:100%;height:100%;border:none" onload="this.contentWindow.print()"></iframe>');
+                    </script>
+                    """,
+                    height=0,
+                )        
                 
-        st.markdown(
-            "<h5 style='text-align:center'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-            unsafe_allow_html=True,
-        )
-        
         html = textwrap.dedent(
             f"""
 <style>
@@ -1657,25 +1695,38 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         line = output2_text_list[i] if i < len(output2_text_list) else ""
         html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td><td class='normal'></td><td class='normal'></td></tr>"
     html += "</table>"
-    st.markdown(html, unsafe_allow_html=True)
 
-    # Display page number and navigation for all pages
+    st.markdown(
+        "<h5 style='text-align:center'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+        unsafe_allow_html=True,
+    )
     st.markdown(
         f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
         unsafe_allow_html=True,
     )
 
+    if result is None:
+        st.write(
+            "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
+            "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
+            "범위에 해당하지 않는 것으로 확인됩니다."
+        )
+    else:
+        st.markdown(html, unsafe_allow_html=True)
+
+
     nav_left, nav_right = st.columns(2)
     with nav_left:
         if st.button("⬅ 이전"):
-            if st.session_state.step8_page == 0:
+            if page == 0:
                 st.session_state.step = 7
-                if "step8_page" in st.session_state:
-                    del st.session_state["step8_page"]
+                st.session_state.pop("step8_page", None)
             else:
                 st.session_state.step8_page -= 1
     with nav_right:
-        if st.button("다음 ➡") and st.session_state.step8_page < total_pages - 1:
+        if st.button("다음 ➡") and page < total_pages - 1:
             st.session_state.step8_page += 1
+
+
 
 
