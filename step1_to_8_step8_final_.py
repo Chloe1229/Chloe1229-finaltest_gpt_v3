@@ -1476,8 +1476,9 @@ def create_application_docx(
     change_width = int(col_widths[2] * 1.5)  # 2. 변경유형
     table.columns[2].width = change_width
 
-    condition_width = int(change_width * 0.6)  # 조건 충족 여부
-    table.columns[3].width = condition_width
+    # 4. 충족조건 column uses the same width as 2. 변경유형
+    table.columns[3].width = change_width
+    condition_width = int(change_width * 0.6)
     
     # Width adjustments for "필요서류" and "해당 페이지 표시" columns
     if len(table.columns) > 5:
@@ -1730,7 +1731,7 @@ if st.session_state.step == 8:
             html_preview = mammoth.convert_to_html(docx_file).value
         html_b64 = base64.b64encode(html_preview.encode("utf-8")).decode("utf-8")
 
-        col_left, col_right = st.columns([1, 1])
+        col_left, col_right = st.columns([5, 1])
         with col_left:
             st.download_button(
                 "📄 파일 다운로드",
@@ -1768,17 +1769,17 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
 </style>
 <table>
   <tr>
-    <td class='title' rowspan='3' style='width:25%'>1. 신청인</td>
-    <td class='normal' style='width:25%'>성명</td>
-    <td colspan='3' style='width:62.5%'></td>
+    <td class='title' rowspan='3' style='width:37.5%'>1. 신청인</td>
+    <td class='normal' style='width:62.5%'>성명</td>
+    <td colspan='3' style='width:37.5%'></td>
   </tr>
   <tr>
-    <td class='normal' style='width:25%'>제조소(영업소) 명칭</td>
-    <td colspan='3' style='width:62.5%'></td>
+    <td class='normal' style='width:62.5%'>제조소(영업소) 명칭</td>
+    <td colspan='3' style='width:37.5%'></td>
   </tr>
   <tr>
-    <td class='normal' style='width:25%'>변경신청 제품명</td>
-    <td colspan='3' style='width:62.5%'></td>
+    <td class='normal' style='width:62.5%'>변경신청 제품명</td>
+    <td colspan='3' style='width:37.5%'></td>
   </tr>
   <tr>
     <td class='title' colspan='2' style='width:51%'>2. 변경유형</td>
@@ -1791,9 +1792,9 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         html += textwrap.dedent(
             """
   <tr>
-    <td class='title' colspan='3'>4. 충족조건</td>
-    <td class='title'>조건 충족 여부<br>(○, X 중 선택)</td>
-    <td class='title'>해당 페이지 표시</td>    
+    <td class='title' colspan='3' style='width:60%'>4. 충족조건</td>
+    <td class='title' style='width:20%'>조건 충족 여부<br>(○, X 중 선택)</td>
+    <td class='title' style='width:20%'>해당 페이지 표시</td>  
   </tr>
 """
         )
@@ -1813,9 +1814,9 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         html += textwrap.dedent(
             """
   <tr>
-    <td class='title' colspan='3'>5. 필요서류 (해당하는 필요서류 기재)</td>
+    <td class='title' colspan='3' style='width:72%'>5. 필요서류 (해당하는 필요서류 기재)</td>
     <td class='title' style='width:8%; white-space:nowrap;'>구비 여부<br>(○, X 중 선택)</td>
-    <td class='title' style='width:13%'>해당 페이지 표시</td>
+    <td class='title' style='width:20%'>해당 페이지 표시</td>
   </tr>
 """
         )
