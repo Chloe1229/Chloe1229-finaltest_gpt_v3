@@ -1762,7 +1762,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td class='title' colspan='3'>3. 신청 유형<br>(AR, IR, Cmin, Cmaj 중 선택)</td>
   </tr>
   <tr>
-@@ -1730,38 +1774,49 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
+
                 state = selections.get(f"{current_key}_req_{rk}", "")
                 symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
             else:
