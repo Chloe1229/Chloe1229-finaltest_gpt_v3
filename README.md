@@ -6,27 +6,27 @@
 
 [4가지 카테고리 작업지시에서 반드시 준수할 핵심원칙]
 - step8의 표 자동화·생성 로직은 반드시 저장소에 있는 '제조방법변경 신청양식_empty_.docx' 파일을 기준 공양식으로 하며,
-- step6, step7에서 사용된 **키명(key name)**, **저장경로(key path)**, **데이터 구조(dict/list)**를 반드시 그대로 활용하여  
+- step6, step7에서 사용된 **키명(key name)**, **저장경로(key path)**, **데이터 구조(dict/list)**를 반드시 그대로 활용하여
   - 예시: step7_results[title_key][result_index]['output_1_tag'], step7_results[title_key][result_index]['output_2_text'], step6_items[title_key]['requirements'], step6_selections[f"{title_key}_req_{k}"] 등
-- step8은 위 키 및 경로를 통해 확보된 모든 데이터를, 각 작업지시서별 세부 자동화 규칙에 따라  
-  “제조방법변경 신청양식_empty_.docx”의 구조에 1:1로 자동 채워넣고(자동화 입력),  
-  streamlit 화면에서는 이 표 구조가 **텍스트 기반 표 구조로 실시간 생성**되어야 하며,  
+- step8은 위 키 및 경로를 통해 확보된 모든 데이터를, 각 작업지시서별 세부 자동화 규칙에 따라
+  “제조방법변경 신청양식_empty_.docx”의 구조에 1:1로 자동 채워넣고(자동화 입력),
+  streamlit 화면에서는 이 표 구조가 **텍스트 기반 표 구조로 실시간 생성**되어야 하며,
   사용자가 “파일 다운로드” 버튼을 클릭하면 동일 구조로 워드(.docx) 파일이 즉시 생성·다운로드 가능해야 합니다.
-- streamlit 화면에 나타나는 표, 내용, 구조, 데이터와  
-  다운로드된 워드파일 내 표, 내용, 구조, 데이터는  
-  **완전히 동일**해야 하며,  
-  “인쇄하기”를 누를 경우에는 streamlit이 사용자의 실제 윈도우/OS 프린터 환경과 직접 연동되어,  
+- streamlit 화면에 나타나는 표, 내용, 구조, 데이터와
+  다운로드된 워드파일 내 표, 내용, 구조, 데이터는
+  **완전히 동일**해야 하며,
+  “인쇄하기”를 누를 경우에는 streamlit이 사용자의 실제 윈도우/OS 프린터 환경과 직접 연동되어,
   **현재 화면과 동일한 표/출력 결과**가 바로 인쇄될 수 있어야 합니다.
-- 모든 페이징(paging) 및 표 렌더링(table rendering)은  
-  **각 title_key에서 도출된 (output_1_tag, output_2_text) 조합별로  
+- 모든 페이징(paging) 및 표 렌더링(table rendering)은
+  **각 title_key에서 도출된 (output_1_tag, output_2_text) 조합별로
   개별적으로 페이지·표가 생성**되어야 하며,
-  - 즉, step7_results[title_key] 리스트의 각 인덱스(result_index)가  
-    고유 조합(결과) 하나를 의미하며,  
+  - 즉, step7_results[title_key] 리스트의 각 인덱스(result_index)가
+    고유 조합(결과) 하나를 의미하며,
     **(title_key, result_index)별로 반드시 한 페이지/한 표가 독립적으로 생성**되어야 합니다.
-- 위 자동화 매핑 기준,  
-  step8 구현의 모든 코드/키/경로/결과는  
-  (title_key, result_index) 단위로 분기·반복되어,  
-  결과가 누락, 병합, 생략, 중복 없이  
+- 위 자동화 매핑 기준,
+  step8 구현의 모든 코드/키/경로/결과는
+  (title_key, result_index) 단위로 분기·반복되어,
+  결과가 누락, 병합, 생략, 중복 없이
   명세된 대로 **개별 표/개별 페이지**로 구현되어야 합니다.
 
 **이 규칙을 모든 step8 코드, 화면, 워드 자동화에 일관되게 적용해야 하며, 어느 한 항목도 누락/병합/생략/무시될 수 없습니다.**
@@ -39,25 +39,25 @@ Although each category presents detailed instructions and explanations, all cont
 
 [Critical Principle Required Across All 4 Instruction Categories]
 - The entire automation and table generation logic for step8 must use the '제조방법변경 신청양식_empty_.docx' file in the repository as the exact base template.
-- All key names, key paths, and data structures (dict/list) from step6 and step7 must be directly referenced and mapped,  
+- All key names, key paths, and data structures (dict/list) from step6 and step7 must be directly referenced and mapped,
   - Example: step7_results[title_key][result_index]['output_1_tag'], step7_results[title_key][result_index]['output_2_text'], step6_items[title_key]['requirements'], step6_selections[f"{title_key}_req_{k}"], etc.
-- All data acquired from the above keys/paths must be auto-inserted into the template structure, in strict accordance with each category’s automation rules,  
+- All data acquired from the above keys/paths must be auto-inserted into the template structure, in strict accordance with each category’s automation rules,
   such that the [제조방법변경 신청양식_empty_.docx] template is filled out 1:1 (cell by cell, field by field) automatically.
-- On the streamlit interface, this template table must be generated in real-time as a text-based table.  
+- On the streamlit interface, this template table must be generated in real-time as a text-based table.
   When the user clicks “파일 다운로드,” the system must create and provide a Word (.docx) file that is structurally and content-wise identical to the on-screen table.
-- The table, content, and data shown on the streamlit page,  
-  and the downloaded Word file,  
-  **must be perfectly identical in structure, data, layout, and values.**  
+- The table, content, and data shown on the streamlit page,
+  and the downloaded Word file,
+  **must be perfectly identical in structure, data, layout, and values.**
   When “인쇄하기” is pressed, the print environment of streamlit must be linked to the user’s local printer/OS print dialog so that the output is exactly as shown on the screen.
-- All paging and table rendering must be performed  
-  **for each unique combination of output_1_tag and output_2_text for a given title_key**;  
-  that is, each result (row) in the step7_results[title_key] list (with its own result_index)  
-  represents a unique combination,  
+- All paging and table rendering must be performed
+  **for each unique combination of output_1_tag and output_2_text for a given title_key**;
+  that is, each result (row) in the step7_results[title_key] list (with its own result_index)
+  represents a unique combination,
   and **each (title_key, result_index) pair must generate a distinct page and table** independently.
-- Following this automation mapping,  
-  all code, keys, data routing, and rendered output in step8 must  
-  branch and repeat strictly by (title_key, result_index),  
-  with no omissions, no merging, no skipping, and no duplication,  
+- Following this automation mapping,
+  all code, keys, data routing, and rendered output in step8 must
+  branch and repeat strictly by (title_key, result_index),
+  with no omissions, no merging, no skipping, and no duplication,
   so that every page and table matches the specification exactly as an individual, unique output.
 
 **This rule must be consistently applied to all step8 code, UI, and Word automation, with no item ever omitted, merged, skipped, or ignored.**
@@ -212,7 +212,7 @@ def render_result_table(title_key, result):
 ## 2. Data Structure Requirements
 
 ### [A] Standardization of step7_results Structure
-- **Previous structure:**  
+- **Previous structure:**
     ```python
     step7_results = {
         "s2_2": {
@@ -223,7 +223,7 @@ def render_result_table(title_key, result):
         # ... (single result per title_key)
     }
     ```
-- **Revised structure:**  
+- **Revised structure:**
     - Each title_key must have a **list of results** (even if there is only one result)
     - Example:
     ```python
@@ -399,7 +399,7 @@ else:
 - Ensure these elements are shown regardless of whether `current_idx` is `None` or a valid index.
 ---
 
-상기 요구사항 미준수시 결과물은 인정되지 않음.  
+상기 요구사항 미준수시 결과물은 인정되지 않음.
 예시/지침/메시지내용은 반드시 완전히 일치하게 적용할 것.
 
 ---
@@ -418,7 +418,7 @@ else:
     - On the relevant step8 page, do not provide Word file download or print functions.
     - The only content to be displayed on the screen for this page must be the following message (with line breaks preserved):
 
-    - (Korean original for reference:  
+    - (Korean original for reference:
         "해당 변경사항에 대한 충족조건을 고려하였을 때,\n「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n범위에 해당하지 않는 것으로 확인됩니다")
     - Move the code that displays the page number and renders the “⬅ 이전/다음 ➡” buttons outside the `else:` block in `step1_to_8_step8_final_.py`.
     - Ensure these elements are shown regardless of whether `current_idx` is `None` or a valid index.
@@ -656,11 +656,11 @@ Follow the instructions, examples, and message content exactly as provided.
 ─────────────────────────────────────────────────────────
 
 - **좌측(2. 변경유형):**
-    - 자동화 값:  
+    - 자동화 값:
       `step7_results[title_key][idx]['title_text']`
         (예: "3.2.P.1 완제의약품의 성상 및 조성\n9. 완제의약품(고형제제 제외)의 조성 변경")
 - **우측(3. 신청유형):**
-    - 첫줄:  
+    - 첫줄:
       `step7_results[title_key][idx]['output_1_tag']`
         (예: "Cmaj", "AR" 등)
 
@@ -674,7 +674,7 @@ Follow the instructions, examples, and message content exactly as provided.
 ────────────────────────────────────────────────────────────
 
 - **좌측:** requirements 항목(예: "1. ~조건명"), 자동 for문으로 행 생성
-    - 실제 코드:  
+    - 실제 코드:
       ```python
       for k, v in step6_items[title_key]['requirements'].items():
           좌측 = v
@@ -690,11 +690,11 @@ Follow the instructions, examples, and message content exactly as provided.
 ────────────────────────────────────────────────────────────
     - "필요서류는 다음과 같습니다.'\n" 부분은 첫번째 행에 도출되지 않게 해주세요.
 
-- **좌측:**  
-    - 현재 페이지 조합의  
-      `step7_results[title_key][idx]['output_2_text']`  
+- **좌측:**
+    - 현재 페이지 조합의
+      `step7_results[title_key][idx]['output_2_text']`
     - 줄바꿈 `\n` 기준 분할, 각 줄 한 행씩(11pt)
-- **우측:**  
+- **우측:**
     - 각 행 모두 공란(직접 기입 없음)
 - **표 구조:** n행 2열, 필요서류 개수만큼 행 생성, 머릿줄(12pt)
     - "필요서류는 다음과 같습니다.'\n" 부분은 첫번째 행에 도출되지 않게 해주세요.
@@ -764,7 +764,7 @@ applicant_table = [
 # - step7_results[title_key][idx]: 각 조건/조합에 대한 결과
 # - step6_items[title_key]['requirements']: requirements 목록
 # - step6_selections[f"{title_key}_req_{k}"]: 충족/미충족 상태
-# 표 스타일, 병합, 열 너비, 폰트 크기/스타일, 정렬, 여백, 줄간격은  
+# 표 스타일, 병합, 열 너비, 폰트 크기/스타일, 정렬, 여백, 줄간격은
 # 반드시 제조방법변경 신청양식_empty_.docx의 스타일, 구조와 동일하게 구현
 
 ─────────────────────────────────────────────────────────────
@@ -817,14 +817,14 @@ def render_documents_table(step7_results, title_key, idx):
 
 ## 3. 전체 코드/데이터 접근법 요약 (실제 구현 참고)
 
-- title_key, idx:  
-    - page_list = [(title_key, idx), ...]  
+- title_key, idx:
+    - page_list = [(title_key, idx), ...]
     - 현재 페이지에서 title_key, idx 참조
-- step7_results:  
+- step7_results:
     - {title_key: [ { 'title_text', 'output_1_tag', 'output_2_text' }, ... ] }
-- step6_items:  
+- step6_items:
     - {title_key: { 'requirements': {k: v, ... } } }
-- step6_selections:  
+- step6_selections:
     - {f"{title_key}_req_{k}": '충족'/'미충족', ... }
 
 ---
@@ -856,7 +856,7 @@ def render_documents_table(step7_results, title_key, idx):
 
 ---
 
-# 반드시 위 항목 전체가 실제 코드, 표, 데이터 매핑에 적용되어야 하며  
+# 반드시 위 항목 전체가 실제 코드, 표, 데이터 매핑에 적용되어야 하며
 한 항목도 누락 없이 개발, 테스트, 코드리뷰, 산출물 문서화에 활용할 것.
 
 
@@ -933,11 +933,11 @@ def render_documents_table(step7_results, title_key, idx):
 ─────────────────────────────────────────────────────────
 
 - **Left (2. 변경유형):**
-    - Automated value:  
+    - Automated value:
       `step7_results[title_key][idx]['title_text']`
         (ex: "3.2.P.1 완제의약품의 성상 및 조성\n9. 완제의약품(고형제제 제외)의 조성 변경")
 - **Right (3. 신청유형):**
-    - First line:  
+    - First line:
       `step7_results[title_key][idx]['output_1_tag']`
         (ex: "Cmaj", "AR", etc.)
 - **Table structure:** 2 rows, 2 columns (actually one row, line break in each cell), template width/spacing/font.
@@ -950,7 +950,7 @@ def render_documents_table(step7_results, title_key, idx):
 ────────────────────────────────────────────────────────────
 
 - **Left:** requirements item (ex: "1. ~조건명"), auto-generated row for each item
-    - Actual code:  
+    - Actual code:
       ```python
       for k, v in step6_items[title_key]['requirements'].items():
           left = v
@@ -969,11 +969,11 @@ def render_documents_table(step7_results, title_key, idx):
 ────────────────────────────────────────────────────────────
     - "필요서류는 다음과 같습니다.'\n" 부분은 첫번째 행에 도출되지 않게 해주세요.
 
-- **Left:**  
-    - For the current page combination  
-      `step7_results[title_key][idx]['output_2_text']`  
+- **Left:**
+    - For the current page combination
+      `step7_results[title_key][idx]['output_2_text']`
     - Split by '\n', each line = 1 row (11pt)
-- **Right:**  
+- **Right:**
     - Always blank, no direct input
 - **Table structure:** n rows, 2 columns, as many rows as required documents, header row 12pt
 
@@ -1101,14 +1101,14 @@ def render_documents_table(step7_results, title_key, idx):
 
 ## 3. Overall Code/Data Access Summary (for implementation)
 
-- title_key, idx:  
-    - page_list = [(title_key, idx), ...]  
+- title_key, idx:
+    - page_list = [(title_key, idx), ...]
     - Use title_key, idx for each page
-- step7_results:  
+- step7_results:
     - {title_key: [ { 'title_text', 'output_1_tag', 'output_2_text' }, ... ] }
-- step6_items:  
+- step6_items:
     - {title_key: { 'requirements': {k: v, ... } } }
-- step6_selections:  
+- step6_selections:
     - {f"{title_key}_req_{k}": '충족'/'미충족', ... }
 
 ---
@@ -1122,7 +1122,7 @@ Example: title_key="p1_9", idx=0
 - 4. 충족조건:
     - for k, v in step6_items['p1_9']['requirements'].items():
         - left: v
-        - right: '○' if step6_selections['p1_9_req_' + k] == '충족'  
+        - right: '○' if step6_selections['p1_9_req_' + k] == '충족'
                   '×' if step6_selections['p1_9_req_' + k] == '미충족'
 - 5. 필요서류:
     - for line in step7_results['p1_9'][0]['output_2_text'].split('\n'):
@@ -1143,9 +1143,9 @@ Example: title_key="p1_9", idx=0
 
 # All items above MUST be implemented in code, table, and data mapping, with NO omission in development, test, code review, or documentation.
 
-Summary:  
-All mapping, code path, cell structure, and data input mode above MUST  
-produce a **single table** in which every item is connected vertically in one structure,  
+Summary:
+All mapping, code path, cell structure, and data input mode above MUST
+produce a **single table** in which every item is connected vertically in one structure,
 as below:
 
 ─────────────────────────────────────────────────────────────
@@ -1157,7 +1157,7 @@ as below:
 │ step7_results[title_key][idx]['title_text'] (11pt) │ step7_results[title_key][idx]['output_1_tag'] (11pt)│
 ├───────────────────────────────────────┴───────────────────────┴──────────────────┤
 │ 4. 충족조건 (header cell, 12pt, Bold, row merge) │ "충족조건" (11pt, Bold) │ "조건 충족 여부(○, X 중 선택)" (11pt, Bold) │
-│ for k, v in step6_items[title_key]['requirements'].items(): │ v (11pt) │ '○' if step6_selections[f"{title_key}_req_{k}"] == '충족'  
+│ for k, v in step6_items[title_key]['requirements'].items(): │ v (11pt) │ '○' if step6_selections[f"{title_key}_req_{k}"] == '충족'
 '×' if step6_selections[f"{title_key}_req_{k}"] == '미충족' (11pt) │
 ├─────────────────────────────────────────────────────────────┼──────────────────┤
 │ 5. 필요서류 (header cell, 12pt, Bold, row merge) │ "필요서류 (해당하는 필요서류 기재)" (11pt, Bold) │ "구비 여부 (○, X 중 선택)" (11pt, Bold) │
@@ -1165,11 +1165,11 @@ as below:
 ─────────────────────────────────────────────────────────────
     - "필요서류는 다음과 같습니다.'\n" 부분은 첫번째 행에 도출되지 않게 해주세요.
 
-In this way, within **one table**,  
-all cell merging, font, alignment, column width/row height,  
-data source (code path/key),  
+In this way, within **one table**,
+all cell merging, font, alignment, column width/row height,
+data source (code path/key),
 row expansion for 충족조건 and 필요서류 (dynamic),
     - "필요서류는 다음과 같습니다.'\n" 부분은 첫번째 행에 도출되지 않게 해주세요.
 
-must be exactly identical to [제조방법변경 신청양식_empty_.docx],  
+must be exactly identical to [제조방법변경 신청양식_empty_.docx],
 and **splitting into multiple tables, or rendering the title separate from the table, is absolutely prohibited.**

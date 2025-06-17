@@ -84,12 +84,12 @@ if st.session_state.step == 3:
     st.session_state.step3_answer = st.radio("답변을 선택하세요.", ["예", "아니오"], key="step3_radio")
 
     if st.session_state.step3_answer == "예":
-        st.success("""「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」에 따라 변경수준을 확인할 수 있습니다.  
+        st.success("""「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」에 따라 변경수준을 확인할 수 있습니다.
 (근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
         st.button("다음단계로", on_click=go_to_step4)
 
     elif st.session_state.step3_answer == "아니오":
-        st.warning("""먼저, CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7를 제출하여 제조방법 자료로서 심사 받으시기 바랍니다.  
+        st.warning("""먼저, CTD 제3부 품질평가 자료 중 3.2.S.2, 3.2.S.3 및 3.2.P.2, 3.2.P.3, 3.2.P.4, 3.2.P.7를 제출하여 제조방법 자료로서 심사 받으시기 바랍니다.
 (근거 : 「의약품의 품목허가·신고·심사 규정」[별표 19])""")
 
 # Step 4 상태 초기화
@@ -1341,7 +1341,7 @@ for idx, row in enumerate(STEP7_ROWS):
 if st.session_state.step == 7:
     current_key = st.session_state.step6_targets[st.session_state.step7_page]
     st.markdown("## 제조방법 변경에 따른 필요서류 및 보고유형")
-    
+
     # title 줄바꿈 처리: \n 또는 \\n → <br> 변환
     st.markdown(
         step6_items[current_key]["title"]
@@ -1355,7 +1355,7 @@ if st.session_state.step == 7:
     else:
         # Clear existing results to avoid duplicates when revisiting
         st.session_state.step7_results[current_key].clear()
-        
+
     visible_results = []
     for idx in STEP7_GROUPS.get(current_key, []):
         row = STEP7_ROWS[idx]
@@ -1433,7 +1433,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # 성명/제조소(영업소) 명칭/변경신청 제품명: increase 1.3x
     # 2. 변경유형, 3. 신청 유형: increase 1.5x
     # 5. 필요서류: increase 1.1x
-    width_ratios = [4/7, 1.3, 1.5, 1.5, 1.1]    
+    width_ratios = [4/7, 1.3, 1.5, 1.5, 1.1]
     orig_widths = [col.width for col in table.columns]
     new_widths = [int(w * r) if w else None for w, r in zip(orig_widths, width_ratios)]
     for row in table.rows:
@@ -1466,7 +1466,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     for r, c in header_cells:
         r_idx = r + extra_reqs if r >= 11 else r
         set_cell_font(table.cell(r_idx, c), 12)
-        
+
     # 1. 신청인: template rows 0-2, columns 2-4 hold the value area
     for r_idx, key in enumerate(["name", "site", "product"]):
         for c in range(2, 5):
@@ -1485,7 +1485,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         cell = table.cell(4, c)
         cell.text = apply_text
         set_cell_font(cell, 11)
-        
+
     # 4. 충족조건: rows 6-10 available
     req_items = list(requirements.items())
     max_reqs = max(5, len(req_items))
@@ -1494,7 +1494,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         new_row = clone_row(table, 10 + i)
         for cell in new_row.cells:
             set_cell_font(cell, 11)
-    for i in range(max_reqs):           
+    for i in range(max_reqs):
         row = 6 + i
         if i < len(req_items):
             rk, text = req_items[i]
@@ -1520,7 +1520,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     for i in range(extra_docs):
         new_row = clone_row(table, 18 + extra_reqs + i)
         for cell in new_row.cells:
-            set_cell_font(cell, 11)    
+            set_cell_font(cell, 11)
     for i in range(max_docs):
         row = doc_start + i
         line = output2_text_list[i] if i < len(output2_text_list) else ""
@@ -1727,7 +1727,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",        
+        "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
         unsafe_allow_html=True,
     )
 
