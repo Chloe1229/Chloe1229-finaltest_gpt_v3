@@ -7,9 +7,12 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
+import os
 import textwrap
 import re
 import base64
+import html
+import ast
 try:
     from docx2pdf import convert
 except Exception:
@@ -1344,6 +1347,50 @@ STEP7_GROUPS = {}
 for idx, row in enumerate(STEP7_ROWS):
     STEP7_GROUPS.setdefault(row["title_key"], []).append(idx)
 
+
+def evaluate_condition(expr, selections):
+    """Safely evaluate a condition expression using step6 selections."""
+    tree = ast.parse(expr, mode="eval")
+
+    def _eval(node):
+        if isinstance(node, ast.BoolOp):
+            if isinstance(node.op, ast.And):
+                return all(_eval(v) for v in node.values)
+            if isinstance(node.op, ast.Or):
+                return any(_eval(v) for v in node.values)
+            raise ValueError("unsupported bool operator")
+        elif isinstance(node, ast.UnaryOp) and isinstance(node.op, ast.Not):
+            return not _eval(node.operand)
+        elif isinstance(node, ast.Compare):
+            if len(node.ops) != 1 or len(node.comparators) != 1:
+                raise ValueError("unsupported comparison")
+            if not isinstance(node.ops[0], ast.Eq):
+                raise ValueError("only equality comparison allowed")
+            return _eval(node.left) == _eval(node.comparators[0])
+        elif isinstance(node, ast.Call):
+            if (
+                isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name)
+                and node.func.value.id == "step6_selections"
+                and node.func.attr == "get"
+            ):
+                args = [_eval(a) for a in node.args]
+                if len(args) == 1:
+                    return selections.get(args[0])
+                if len(args) == 2:
+                    return selections.get(args[0], args[1])
+            raise ValueError("unsupported call")
+        elif isinstance(node, ast.Constant):
+            return node.value
+        elif isinstance(node, ast.Name):
+            if node.id in {"True", "False"}:
+                return node.id == "True"
+            raise ValueError(f"unknown identifier: {node.id}")
+        else:
+            raise ValueError(f"unsupported syntax: {ast.dump(node)}")
+
+    return bool(_eval(tree.body))
+
 # ===== Step7 화면 =====
 if st.session_state.step == 7:
     current_key = st.session_state.step6_targets[st.session_state.step7_page]
@@ -1368,7 +1415,7 @@ if st.session_state.step == 7:
         row = STEP7_ROWS[idx]
         expr = row["output_condition_all_met"].lstrip("if ").rstrip(":")
         try:
-            cond = eval(expr, {}, {"step6_selections": st.session_state.step6_selections})
+            cond = evaluate_condition(expr, st.session_state.step6_selections)
         except Exception:
             cond = False
 
@@ -1624,10 +1671,25 @@ if st.session_state.step == 8:
 
     # Header should appear regardless of whether a result exists
     result = None
-    html = None
+    html_content = None
     # Initialize list outside the conditional so it's always reset
     output2_text_list = []
 
+    st.markdown(
+        """
+        <style>
+        table { border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }
+        td { border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }
+        .title { font-weight: bold; font-size: 12pt; }
+        .normal { font-size: 11pt; }
+        .nav-row { display: flex; justify-content: space-between; align-items: center; }
+        .nav-btn { width: 150px; white-space: nowrap; }
+        .docs-cell { white-space: pre-wrap; word-break: break-all; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    
     if current_idx is not None:
         result = step7_results[current_key][current_idx]
         requirements = step6_items.get(current_key, {}).get("requirements", {})
@@ -1666,23 +1728,12 @@ if st.session_state.step == 8:
 
         with open(file_path, "rb") as f:
             file_bytes = f.read()
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
         if not (generated_pdf and os.path.exists(pdf_path)):
             st.warning("PDF 파일이 생성되지 않아 인쇄 기능을 사용할 수 없습니다.")
-            
-        st.markdown(
-            """
-            <style>
-            table { border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }
-            td { border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }
-            .title { font-weight: bold; font-size: 12pt; }
-            .normal { font-size: 11pt; }
-            .nav-row { display: flex; justify-content: space-between; align-items: center; }
-            .nav-btn { width: 150px; white-space: nowrap; }
-            .docs-cell { white-space: pre-wrap; word-break: break-all; }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
 
         left_col, spacer, right_col = st.columns([1,5,1])
         with left_col:
@@ -1719,7 +1770,12 @@ if st.session_state.step == 8:
                     "PDF 파일을 생성하지 못해 인쇄 기능을 사용할 수 없습니다."
                 )
 
-        html = textwrap.dedent(
+        try:
+            os.remove(pdf_path)
+        except OSError:
+            pass
+
+        html_content = textwrap.dedent(
             f"""
             <style>
             table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
@@ -1747,8 +1803,8 @@ if st.session_state.step == 8:
     <td class='title' colspan='3'>3. 신청 유형<br>(AR, IR, Cmin, Cmaj 중 선택)</td>
   </tr>
   <tr>
-    <td colspan='2' class='normal'>{result["title_text"]}</td>
-    <td colspan='3' class='normal'>{result["output_1_tag"]}</td>
+    <td colspan='2' class='normal'>{html.escape(result["title_text"])}</td>
+    <td colspan='3' class='normal'>{html.escape(result["output_1_tag"])}</td>
   </tr>
   <tr>
     <td class='title' colspan='3' style='width:69%'>4. 충족조건</td>
@@ -1761,13 +1817,13 @@ if st.session_state.step == 8:
         for rk, text in req_items:
             state = selections.get(f"{current_key}_req_{rk}", "")
             symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
-            html += (
+            html_content += (
                 f"<tr><td colspan='3' class='normal' style='text-align:left;width:69%'>"
-                f"{text}</td><td colspan='2' class='normal' style='width:31%'>"
+                f"{html.escape(text)}</td><td colspan='2' class='normal' style='width:31%'>"
                 f"{symbol}</td></tr>"
             )
             
-        html += textwrap.dedent(
+        html_content += textwrap.dedent(
             """
   <tr>
     <td class='title docs-cell' colspan='3' style='width:81%'>5. 필요서류 (해당하는 필요서류 기재)</td>
@@ -1779,14 +1835,14 @@ if st.session_state.step == 8:
         max_docs = max(5, len(output2_text_list))
         for i in range(max_docs):
             line = output2_text_list[i] if i < len(output2_text_list) else ""
-            html += (
+            html_content += (
                 f"<tr><td colspan='3' class='normal docs-cell' style='text-align:left;width:81%'>"
-                f"{line}</td><td class='normal' style='width:8%'></td>"
+                f"{html.escape(line)}</td><td class='normal' style='width:8%'></td>"
                 f"<td class='normal' style='width:11%'></td></tr>"
             )
             
-    if html is not None:
-        html += "</table>"
+    if html_content is not None:
+        html_content += "</table>"
 
     # Display header for all pages
     st.markdown(
@@ -1805,7 +1861,7 @@ if st.session_state.step == 8:
             "범위에 해당하지 않는 것으로 확인됩니다.",
         )
     else:
-        st.markdown(html, unsafe_allow_html=True)
+        st.markdown(html_content, unsafe_allow_html=True)
 
     # Navigation controls appear on every page
     st.markdown('<div class="nav-row">', unsafe_allow_html=True)
