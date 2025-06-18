@@ -1461,8 +1461,8 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     ]
 
     req_items = list(requirements.items())
-    max_reqs = max(5, len(req_items))
-    extra_reqs = max_reqs - 5
+    num_reqs = len(req_items)
+    extra_reqs = max(0, num_reqs - 5)
 
     doc_start = 12 + extra_reqs
 
@@ -1491,21 +1491,17 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         
     # 4. 충족조건: rows 6-10 available
     req_items = list(requirements.items())
-    max_reqs = max(5, len(req_items))
-    extra_reqs = max_reqs - 5
+    num_reqs = len(req_items)
+    extra_reqs = max(0, num_reqs - 5)
     for i in range(extra_reqs):
         new_row = clone_row(table, 10 + i)
         for cell in new_row.cells:
             set_cell_font(cell, 11)
-    for i in range(max_reqs):           
+    for i in range(num_reqs):
         row = 6 + i
-        if i < len(req_items):
-            rk, text = req_items[i]
-            state = selections.get(f"{current_key}_req_{rk}", "")
-            symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
-        else:
-            text = ""
-            symbol = ""
+        rk, text = req_items[i]
+        state = selections.get(f"{current_key}_req_{rk}", "")
+        symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
         for c in [0, 1, 2]:
             cell = table.cell(row, c)
             cell.text = text
@@ -1646,32 +1642,34 @@ if st.session_state.step == 8:
         st.markdown('<div class="right-btn">', unsafe_allow_html=True)
         print_clicked = st.button("🖨 인쇄하기")
         st.markdown('</div></div>', unsafe_allow_html=True)
+        popup_error = st.empty()
+        popup_error.markdown("<div id='popup-error' style='color:red'></div>", unsafe_allow_html=True)
 
         if print_clicked:
             pdf_path = file_path.replace(".docx", ".pdf")
-            convert_docx_to_pdf(file_path, pdf_path)
+            try:
+                convert_docx_to_pdf(file_path, pdf_path)
 
-            with open(pdf_path, "rb") as pf:
-                b64 = base64.b64encode(pf.read()).decode()
+                with open(pdf_path, "rb") as pf:
+                    b64 = base64.b64encode(pf.read()).decode()
 
-            st.components.v1.html(
-                f"""
-                <script>
-                const pdfData = "data:application/pdf;base64,{b64}";
-                const newWin = window.open("");
-                newWin.document.write("<html><head><title>Print</title></head><body style='margin:0'>");
-                newWin.document.write("<iframe src='" + pdfData + "' style='width:100%;height:100%;border:none' onload='this.contentWindow.focus();this.contentWindow.print();'></iframe>");
-                newWin.document.write("</body></html>");
-                newWin.document.close();
+                st.components.v1.html(
+                    f"""
+                    <script>
+                    const pdfData = "data:application/pdf;base64,{b64}";
+                    const newWin = window.open("");
+                const errorDiv = window.parent.document.getElementById('popup-error');
+                if (newWin) {{
+                    if (errorDiv) errorDiv.innerText = "";
+                    newWin.document.write("<html><head><title>Print</title></head><body style='margin:0'>");
+                    newWin.document.write("<iframe src='" + pdfData + "' style='width:100%;height:100%;border:none' onload='this.contentWindow.focus();this.contentWindow.print();'></iframe>");
+                    newWin.document.write("</body></html>");
+                    newWin.document.close();
+                    newWin.focus();
+                }} else {{
+                    if (errorDiv) errorDiv.innerText = "Please allow pop-ups to print.";
+                }}
                 </script>
-                """,
-                height=0,
-            )
-
-            os.remove(file_path)
-            os.remove(pdf_path)
-
-        html = textwrap.dedent(
             f"""
 <style>
 table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
@@ -1709,12 +1707,9 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         )
 
         req_items = list(requirements.items())
-        max_reqs = max(5, len(req_items))
-        for idx in range(max_reqs):
-            if idx < len(req_items):
-                rk, text = req_items[idx]
-                state = selections.get(f"{current_key}_req_{rk}", "")
-                symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
+        for rk, text in req_items:
+            state = selections.get(f"{current_key}_req_{rk}", "")
+            symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
             else:
                 text = ""
                 symbol = ""
