@@ -1447,7 +1447,19 @@ def convert_docx_to_pdf(docx_path: str, pdf_path: str):
         return None
 
 def apply_column_widths(table, ratios):
-    """Apply column width ratios to all rows of ``table``."""
+    """Apply column width ratios to all columns of ``table``.
+
+    This uses the template column widths as the base and multiplies them by the
+    provided ``ratios`` so that every row keeps consistent sizing.
+    """
+    for i, ratio in enumerate(ratios):
+        if i >= len(table.columns):
+            break
+        base_width = table.columns[i].width
+        if base_width:
+            new_width = int(base_width * ratio)
+            for cell in table.columns[i].cells:
+                cell.width = new_width    
     first_row = table.rows[0]
     orig_widths = [cell.width for cell in first_row.cells]
     new_widths = [int(w * r) if w else None for w, r in zip(orig_widths, ratios)]
