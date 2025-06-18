@@ -1450,7 +1450,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     table.cell(5, 4).text = "조건 충족 여부\n(○, X 중 선택)"
     for c in range(4):
         table.cell(5, c).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-    table.cell(5, 4).vertical_alignment = WD_ALIGN_VERTICAL.CENTE
+    table.cell(5, 4).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
     
     # Ensure header cells use 12pt font
     header_cells = [
