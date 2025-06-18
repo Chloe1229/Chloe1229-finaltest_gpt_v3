@@ -1683,22 +1683,21 @@ if st.session_state.step == 8:
         st.markdown("")
         
         if print_clicked:
+            pdf_path = file_path.replace(".docx", ".pdf")
+            convert_docx_to_pdf(file_path, pdf_path)
+
+            with open(pdf_path, "rb") as pf:
+                b64 = base64.b64encode(pf.read()).decode()
+
             st.components.v1.html(
                 f"""
                 <script>
-                const pdfData = "data:application/pdf;base64,{pdf_b64}";
+                const pdfData = "data:application/pdf;base64,{b64}";
                 const newWin = window.open("");
-                const errorDiv = window.parent.document.getElementById('popup-error');
-                if (newWin) {{
-                    if (errorDiv) errorDiv.innerText = "";
-                    newWin.document.write(`<!doctype html><html><head><title>Print</title></head><body style='margin:0'>`);
-                    newWin.document.write(`<embed src='" + pdfData + "' type='application/pdf' width='100%' height='100%' onload='window.print();window.close();'>`);
-                    newWin.document.write(`</body></html>`);
-                    newWin.document.close();
-                    newWin.focus();
-                }} else {{
-                    if (errorDiv) errorDiv.innerText = "Please allow pop-ups to print.";
-                }}
+                newWin.document.write("<html><head><title>Print</title></head><body style='margin:0'>");
+                newWin.document.write("<iframe src='" + pdfData + "' style='width:100%;height:100%;border:none' onload='this.contentWindow.focus();this.contentWindow.print();'></iframe>");
+                newWin.document.write("</body></html>");
+                newWin.document.close();
                 </script>
                 """,
                 height=0,
