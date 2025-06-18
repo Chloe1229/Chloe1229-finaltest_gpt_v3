@@ -1450,7 +1450,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     table.cell(5, 4).text = "조건 충족 여부\n(○, X 중 선택)"
     for c in range(4):
         table.cell(5, c).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-    table.cell(5, 4).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    table.cell(5, 4).vertical_alignment = WD_ALIGN_VERTICAL.CENTE
     
     # Ensure header cells use 12pt font
     header_cells = [
@@ -1575,6 +1575,8 @@ if st.session_state.step == 8:
 
     result = None
     html = None
+    output2_text_list = []
+
 
     if current_idx is not None:
         result = step7_results[current_key][current_idx]
@@ -1648,10 +1650,10 @@ if st.session_state.step == 8:
         if print_clicked:
             pdf_path = file_path.replace(".docx", ".pdf")
             convert_docx_to_pdf(file_path, pdf_path)
-            
+
             with open(pdf_path, "rb") as pf:
                 b64 = base64.b64encode(pf.read()).decode()
-                
+
             st.components.v1.html(
                 f"""
                 <script>
@@ -1661,6 +1663,7 @@ if st.session_state.step == 8:
                 newWin.document.write("<iframe src='" + pdfData + "' style='width:100%;height:100%;border:none' onload='this.contentWindow.focus();this.contentWindow.print();'></iframe>");
                 newWin.document.write("</body></html>");
                 newWin.document.close();
+                </script>
                 """,
                 height=0,
             )
