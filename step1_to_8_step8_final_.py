@@ -2,9 +2,9 @@ import streamlit as st
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
-import os
 import textwrap
 import re
 import base64
@@ -1465,7 +1465,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # 2. 변경유형과 4. 충족조건은 약 1.5×, 5. 필요서류는 약 1.1×
     width_ratios = [4 / 7, 1.3, 1.5, 1.5, 1.1]
     apply_column_widths(table, width_ratios)
-
+    
     # Shrink row heights to 80% of the template values
     for row in table.rows:
         if row.height:
