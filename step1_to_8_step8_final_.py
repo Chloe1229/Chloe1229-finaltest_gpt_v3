@@ -2,7 +2,7 @@ import streamlit as st
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_ALIGN_VERTICAL
+from docx.enum.table import WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 import os
@@ -1424,16 +1424,20 @@ def convert_docx_to_pdf(docx_path: str, pdf_path: str) -> str:
     convert(docx_path, pdf_path)
     return pdf_path
 
+def apply_column_widths(table, ratios):
+    """Apply column width ratios to all rows of ``table``."""
+    apply_column_widths(table, width_ratios)
+
+
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
     # Load template to preserve all styles and merges
     doc = Document('제조방법변경 신청양식_empty_.docx')
     table = doc.tables[0]
-    # Adjust column widths according to additional_README ratios
     # Column width adjustments from additional_README.md
     # 1. 신청인 ≈ 4/7, 성명/제조소(영업소) 명칭/변경신청 제품명 ≈ 1.3×
     # 2. 변경유형과 4. 충족조건은 약 1.5×, 5. 필요서류는 약 1.1×
     width_ratios = [4 / 7, 1.3, 1.5, 1.5, 1.1]
-    orig_widths = [col.width for col in table.columns]
+    apply_column_widths(table, width_ratios)
     new_widths = [int(w * r) if w else None for w, r in zip(orig_widths, width_ratios)]
     for row in table.rows:
         for idx, width in enumerate(new_widths):
@@ -1444,10 +1448,14 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     for row in table.rows:
         if row.height:
             row.height = int(row.height * 0.8)
+        row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+
 
     # Update header text with explicit line breaks
     table.cell(3, 4).text = "3. 신청 유형\n(AR, IR, Cmin, Cmaj 중 선택)"
     table.cell(5, 4).text = "조건 충족 여부\n(○, X 중 선택)"
+    table.cell(11, 3).text = "구비 여부\n(○, X 중 선택)"
+    
     for c in range(4):
         table.cell(5, c).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
     table.cell(5, 4).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
@@ -1510,6 +1518,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
             cell = table.cell(row, c)
             cell.text = symbol
             set_cell_font(cell, 11)
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             for p in cell.paragraphs:
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
@@ -1571,6 +1580,7 @@ if st.session_state.step == 8:
 
     result = None
     html = None
+    # Initialize list outside the conditional so it's always reset
     output2_text_list = []
 
 
@@ -1611,73 +1621,76 @@ if st.session_state.step == 8:
                 file_path,
             )
 
+        pdf_path = file_path.replace(".docx", ".pdf")
+        convert_docx_to_pdf(file_path, pdf_path)
+
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-
+        with open(pdf_path, "rb") as pf:
+            pdf_b64 = base64.b64encode(pf.read()).decode()
+            
         st.markdown(
             """
             <style>
-            .left-btn, .right-btn, .nav-btn {
-                width: 150px;
-                white-space: nowrap;
-            }
-            .btn-row, .nav-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
+            table { border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }
+            td { border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }
+            .title { font-weight: bold; font-size: 12pt; }
+            .normal { font-size: 11pt; }
+            .nav-row { display: flex; justify-content: space-between; align-items: center; }
+            .nav-btn { width: 150px; white-space: nowrap; }
             }
             </style>
             """,
             unsafe_allow_html=True,
         )
 
-        st.markdown('<div class="btn-row">', unsafe_allow_html=True)
-        st.markdown('<div class="left-btn">', unsafe_allow_html=True)
-        st.download_button(
-            "📄 파일 다운로드",
-            file_bytes,
-            file_name=f"신청서_{current_key}_{current_idx}.docx",
-        )
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('<div class="right-btn">', unsafe_allow_html=True)
-        print_clicked = st.button("🖨 인쇄하기")
-        st.markdown('</div></div>', unsafe_allow_html=True)
+        left_col, right_col = st.columns(2)
+        with left_col:
+            st.download_button(
+                "📄 파일 다운로드",
+                file_bytes,
+                file_name=f"신청서_{current_key}_{current_idx}.docx",
+            )
+        with right_col:
+            print_clicked = st.button("🖨 인쇄하기")
         popup_error = st.empty()
-        popup_error.markdown("<div id='popup-error' style='color:red'></div>", unsafe_allow_html=True)
-
+        popup_error.markdown(
+            "<div id='popup-error' style='color:red'></div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown("")
+        
         if print_clicked:
-            pdf_path = file_path.replace(".docx", ".pdf")
-            try:
-                convert_docx_to_pdf(file_path, pdf_path)
-
-                with open(pdf_path, "rb") as pf:
-                    b64 = base64.b64encode(pf.read()).decode()
-
-                st.components.v1.html(
-                    f"""
-                    <script>
-                    const pdfData = "data:application/pdf;base64,{b64}";
-                    const newWin = window.open("");
+            st.components.v1.html(
+                f"""
+                <script>
+                const pdfData = "data:application/pdf;base64,{pdf_b64}";
+                const newWin = window.open("");
                 const errorDiv = window.parent.document.getElementById('popup-error');
                 if (newWin) {{
                     if (errorDiv) errorDiv.innerText = "";
-                    newWin.document.write("<html><head><title>Print</title></head><body style='margin:0'>");
-                    newWin.document.write("<iframe src='" + pdfData + "' style='width:100%;height:100%;border:none' onload='this.contentWindow.focus();this.contentWindow.print();'></iframe>");
-                    newWin.document.write("</body></html>");
+                    newWin.document.write(`<!doctype html><html><head><title>Print</title></head><body style='margin:0'>`);
+                    newWin.document.write(`<embed src='" + pdfData + "' type='application/pdf' width='100%' height='100%' onload='window.print();window.close();'>`);
+                    newWin.document.write(`</body></html>`);
                     newWin.document.close();
                     newWin.focus();
                 }} else {{
                     if (errorDiv) errorDiv.innerText = "Please allow pop-ups to print.";
                 }}
                 </script>
+                """,
+                height=0,
+            )
+
+        html = textwrap.dedent(
             f"""
-<style>
-table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
-td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }}
-.title {{ font-weight: bold; font-size: 12pt; }}
-.normal {{ font-size: 11pt; }}
-</style>
-<table>
+            <style>
+            table {{ border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }}
+            td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }}
+            .title {{ font-weight: bold; font-size: 12pt; }}
+            .normal {{ font-size: 11pt; }}
+            </style>
+            <table>
   <tr>
     <td class='title' rowspan='3' style='width:11%'>1. 신청인</td>
     <td class='normal' style='width:10%'>성명</td>
@@ -1700,8 +1713,8 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     <td colspan='3' class='normal'>{result["output_1_tag"]}</td>
   </tr>
   <tr>
-    <td class='title' colspan='3'>4. 충족조건</td>
-    <td class='title' colspan='2'>조건 충족 여부(○, X 중 선택)</td>
+    <td class='title' colspan='3' style='width:69%'>4. 충족조건</td>
+    <td class='title' colspan='2' style='width:31%'>조건 충족 여부(○, X 중 선택)</td>
   </tr>
 """
         )
@@ -1710,24 +1723,30 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         for rk, text in req_items:
             state = selections.get(f"{current_key}_req_{rk}", "")
             symbol = "○" if state == "충족" else "×" if state == "미충족" else ""
-            else:
-                text = ""
-                symbol = ""
-            html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{text}</td><td colspan='2' class='normal'>{symbol}</td></tr>"
-
+            html += (
+                f"<tr><td colspan='3' class='normal' style='text-align:left;width:69%'>"
+                f"{text}</td><td colspan='2' class='normal' style='width:31%'>"
+                f"{symbol}</td></tr>"
+            )
+            
         html += textwrap.dedent(
             """
   <tr>
-    <td class='title' colspan='3'>5. 필요서류 (해당하는 필요서류 기재)</td>
+    <td class='title' colspan='3' style='width:81%'>5. 필요서류 (해당하는 필요서류 기재)</td>
     <td class='title' style='width:8%'>구비 여부<br>(○, X 중 선택)</td>
-    <td class='title' style='width:13%'>해당 페이지 표시</td>
+    <td class='title' style='width:11%'>해당 페이지 표시</td>
   </tr>
 """
         )
         max_docs = max(5, len(output2_text_list))
         for i in range(max_docs):
             line = output2_text_list[i] if i < len(output2_text_list) else ""
-            html += f"<tr><td colspan='3' class='normal' style='text-align:left'>{line}</td><td class='normal'></td><td class='normal'></td></tr>"
+            html += (
+                f"<tr><td colspan='3' class='normal' style='text-align:left;width:81%'>"
+                f"{line}</td><td class='normal' style='width:8%'></td>"
+                f"<td class='normal' style='width:11%'></td></tr>"
+            )
+            
     if html is not None:
         html += "</table>"
 
@@ -1735,6 +1754,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
         unsafe_allow_html=True,
     )
+    # Display current page number regardless of result state
     st.markdown(
         f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
         unsafe_allow_html=True,
@@ -1749,6 +1769,7 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
     else:
         st.markdown(html, unsafe_allow_html=True)
 
+    # Navigation controls appear on every page
     st.markdown('<div class="nav-row">', unsafe_allow_html=True)
     st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
     if st.button("⬅ 이전"):
