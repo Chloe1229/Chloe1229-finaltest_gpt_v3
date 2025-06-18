@@ -2,6 +2,7 @@ import streamlit as st
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_ALIGN_VERTICAL
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 import os
@@ -1429,11 +1430,9 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     table = doc.tables[0]
     # Adjust column widths according to additional_README ratios
     # Column width adjustments from additional_README.md
-    # 1. 신청인: reduce to 4/7
-    # 성명/제조소(영업소) 명칭/변경신청 제품명: increase 1.3x
-    # 2. 변경유형, 3. 신청 유형: increase 1.5x
-    # 5. 필요서류: increase 1.1x
-    width_ratios = [4/7, 1.3, 1.5, 1.5, 1.1]    
+    # 1. 신청인 ≈ 4/7, 성명/제조소(영업소) 명칭/변경신청 제품명 ≈ 1.3×
+    # 2. 변경유형과 4. 충족조건은 약 1.5×, 5. 필요서류는 약 1.1×
+    width_ratios = [4 / 7, 1.3, 1.5, 1.5, 1.1]
     orig_widths = [col.width for col in table.columns]
     new_widths = [int(w * r) if w else None for w, r in zip(orig_widths, width_ratios)]
     for row in table.rows:
@@ -1448,7 +1447,11 @@ def create_application_docx(current_key, result, requirements, selections, outpu
 
     # Update header text with explicit line breaks
     table.cell(3, 4).text = "3. 신청 유형\n(AR, IR, Cmin, Cmaj 중 선택)"
-
+    table.cell(5, 4).text = "조건 충족 여부\n(○, X 중 선택)"
+    for c in range(4):
+        table.cell(5, c).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    table.cell(5, 4).vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    
     # Ensure header cells use 12pt font
     header_cells = [
         (0, 0),
@@ -1511,7 +1514,9 @@ def create_application_docx(current_key, result, requirements, selections, outpu
             cell = table.cell(row, c)
             cell.text = symbol
             set_cell_font(cell, 11)
-
+            for p in cell.paragraphs:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
     # 5. 필요서류: rows 12-18 available
     doc_start = 12 + extra_reqs
     output2_text_list = output2_text_list[:15]
@@ -1638,18 +1643,24 @@ if st.session_state.step == 8:
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('<div class="right-btn">', unsafe_allow_html=True)
         print_clicked = st.button("🖨 인쇄하기")
+        st.markdown('</div></div>', unsafe_allow_html=True)
 
         if print_clicked:
             pdf_path = file_path.replace(".docx", ".pdf")
             convert_docx_to_pdf(file_path, pdf_path)
+            
             with open(pdf_path, "rb") as pf:
                 b64 = base64.b64encode(pf.read()).decode()
+                
             st.components.v1.html(
                 f"""
                 <script>
-                var newWin = window.open('');
-                newWin.document.write('<iframe src="data:application/pdf;base64,{b64}" style="width:100%;height:100%;border:none" onload="this.contentWindow.print()"></iframe>');
-                </script>
+                const pdfData = "data:application/pdf;base64,{b64}";
+                const newWin = window.open("");
+                newWin.document.write("<html><head><title>Print</title></head><body style='margin:0'>");
+                newWin.document.write("<iframe src='" + pdfData + "' style='width:100%;height:100%;border:none' onload='this.contentWindow.focus();this.contentWindow.print();'></iframe>");
+                newWin.document.write("</body></html>");
+                newWin.document.close();
                 """,
                 height=0,
             )
@@ -1723,23 +1734,22 @@ td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align:
         html += "</table>"
 
     st.markdown(
-        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+        "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",        
+        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
         unsafe_allow_html=True,
     )
 
-    if result is None:
+    if current_idx is None:
         st.write(
-            "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
-            "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
-            "범위에 해당하지 않는 것으로 확인됩니다."
+            "해당 변경사항에 대한 충족조건을 고려하였을 때,\n",
+            "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n",
+            "범위에 해당하지 않는 것으로 확인됩니다.",
         )
     else:
         st.markdown(html, unsafe_allow_html=True)
-
 
     st.markdown('<div class="nav-row">', unsafe_allow_html=True)
     st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
