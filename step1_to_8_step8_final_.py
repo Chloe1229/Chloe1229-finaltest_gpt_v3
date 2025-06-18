@@ -1566,29 +1566,28 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # 5. 필요서류: rows 12-18 available
     doc_start = 12 + extra_reqs
     output2_text_list = output2_text_list[:15]
-    if output2_text_list:
-        max_docs = max(5, len(output2_text_list))
-        extra_docs = max(0, max_docs - 7)
-        for i in range(extra_docs):
-            new_row = clone_row(table, 18 + extra_reqs + i)
-            for cell in new_row.cells:
-                set_cell_font(cell, 11)
-        for i in range(max_docs):
-            row = doc_start + i
-            line = output2_text_list[i] if i < len(output2_text_list) else ""
-            for c in [0, 1, 2]:
-                cell = table.cell(row, c)
-                cell.text = line
-                set_cell_font(cell, 11)
-                enable_word_wrap(cell)
-            cell = table.cell(row, 3)
-            cell.text = ""
+    max_docs = max(5, len(output2_text_list))
+    extra_docs = max(0, max_docs - 7)
+    for i in range(extra_docs):
+        new_row = clone_row(table, 18 + extra_reqs + i)
+        for cell in new_row.cells:
+            set_cell_font(cell, 11)
+    for i in range(max_docs):
+        row = doc_start + i
+        line = output2_text_list[i] if i < len(output2_text_list) else ""
+        for c in [0, 1, 2]:
+            cell = table.cell(row, c)
+            cell.text = line
             set_cell_font(cell, 11)
             enable_word_wrap(cell)
-            cell = table.cell(row, 4)
-            cell.text = ""
-            set_cell_font(cell, 11)
-            enable_word_wrap(cell)
+        cell = table.cell(row, 3)
+        cell.text = ""
+        set_cell_font(cell, 11)
+        enable_word_wrap(cell)
+        cell = table.cell(row, 4)
+        cell.text = ""
+        set_cell_font(cell, 11)
+        enable_word_wrap(cell)
 
     doc.save(file_path)
     return file_path
@@ -1624,14 +1623,6 @@ if st.session_state.step == 8:
     current_key, current_idx = page_list[page]
 
     # Header should appear regardless of whether a result exists
-    st.markdown(
-        "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-        unsafe_allow_html=True,
-    )
     result = None
     html = None
     # Initialize list outside the conditional so it's always reset
@@ -1681,7 +1672,6 @@ if st.session_state.step == 8:
         st.markdown(
             """
             <style>
-            <style>
             table { border-collapse: collapse; width: 100%; font-family: 'Nanum Gothic', sans-serif; }
             td { border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }
             .title { font-weight: bold; font-size: 12pt; }
@@ -1694,7 +1684,7 @@ if st.session_state.step == 8:
             unsafe_allow_html=True,
         )
 
-        left_col, spacer, right_col = st.columns([1,6,1])
+        left_col, spacer, right_col = st.columns([1,5,1])
         with left_col:
             st.download_button(
                 "📄 파일 다운로드",
@@ -1705,17 +1695,7 @@ if st.session_state.step == 8:
         with right_col:
             print_clicked = st.button("🖨 인쇄하기", use_container_width=True)
 
-        # Page title appears directly below the buttons
-        st.markdown(
-            "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-            unsafe_allow_html=True,
-        )
-        # Display current page number beneath the title
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
-        
+
         if print_clicked:
             if generated_pdf and os.path.exists(pdf_path):
                 with open(pdf_path, "rb") as pf:
@@ -1764,7 +1744,7 @@ if st.session_state.step == 8:
   </tr>
   <tr>
     <td class='title' colspan='2'>2. 변경유형</td>
-    <td class='title' colspan='3'>3. 신청 유형(AR, IR, Cmin, Cmaj 중 선택)</td>
+    <td class='title' colspan='3'>3. 신청 유형<br>(AR, IR, Cmin, Cmaj 중 선택)</td>
   </tr>
   <tr>
     <td colspan='2' class='normal'>{result["title_text"]}</td>
@@ -1796,41 +1776,35 @@ if st.session_state.step == 8:
   </tr>
 """
         )
-        if output2_text_list:
-            max_docs = max(5, len(output2_text_list))
-            for i in range(max_docs):
-                line = output2_text_list[i] if i < len(output2_text_list) else ""
-                html += (
-                    f"<tr><td colspan='3' class='normal docs-cell' style='text-align:left;width:81%'>"
-                    f"{line}</td><td class='normal' style='width:8%'></td>"
-                    f"<td class='normal' style='width:11%'></td></tr>"
-                )
+        max_docs = max(5, len(output2_text_list))
+        for i in range(max_docs):
+            line = output2_text_list[i] if i < len(output2_text_list) else ""
+            html += (
+                f"<tr><td colspan='3' class='normal docs-cell' style='text-align:left;width:81%'>"
+                f"{line}</td><td class='normal' style='width:8%'></td>"
+                f"<td class='normal' style='width:11%'></td></tr>"
+            )
             
     if html is not None:
         html += "</table>"
+
+    # Display header for all pages
+    st.markdown(
+        "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+        unsafe_allow_html=True,
+    )
+
     if current_idx is None:
-        st.markdown(
-            "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
         st.write(
             "해당 변경사항에 대한 충족조건을 고려하였을 때,\n",
             "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n",
             "범위에 해당하지 않는 것으로 확인됩니다.",
         )
     else:
-        st.markdown(
-            "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-            unsafe_allow_html=True,
-        )
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
         st.markdown(html, unsafe_allow_html=True)
 
     # Navigation controls appear on every page
