@@ -1459,14 +1459,7 @@ def apply_column_widths(table, ratios):
         if base_width:
             new_width = int(base_width * ratio)
             for cell in table.columns[i].cells:
-                cell.width = new_width    
-    first_row = table.rows[0]
-    orig_widths = [cell.width for cell in first_row.cells]
-    new_widths = [int(w * r) if w else None for w, r in zip(orig_widths, ratios)]
-    for row in table.rows:
-        for idx, width in enumerate(new_widths):
-            if idx < len(row.cells) and width:
-                row.cells[idx].width = width
+                cell.width = new_width
 
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
     # Load template to preserve all styles and merges
@@ -1483,7 +1476,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
         if row.height:
             row.height = int(row.height * 0.8)
         row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
-
 
     # Update header text with explicit line breaks
     table.cell(3, 4).text = "3. 신청 유형\n(AR, IR, Cmin, Cmaj 중 선택)"
@@ -1656,12 +1648,14 @@ if st.session_state.step == 8:
             )
 
         pdf_path = file_path.replace(".docx", ".pdf")
-        convert_docx_to_pdf(file_path, pdf_path)
+        generated_pdf = convert_docx_to_pdf(file_path, pdf_path)
 
         with open(file_path, "rb") as f:
             file_bytes = f.read()
-        with open(pdf_path, "rb") as pf:
-            pdf_b64 = base64.b64encode(pf.read()).decode()
+        pdf_b64 = None
+        if generated_pdf and os.path.exists(pdf_path):
+            with open(pdf_path, "rb") as pf:
+                pdf_b64 = base64.b64encode(pf.read()).decode()
             
         st.markdown(
             """
@@ -1696,24 +1690,27 @@ if st.session_state.step == 8:
         
         if print_clicked:
             pdf_path = file_path.replace(".docx", ".pdf")
-            convert_docx_to_pdf(file_path, pdf_path)
+            generated_pdf = convert_docx_to_pdf(file_path, pdf_path)
 
-            with open(pdf_path, "rb") as pf:
-                b64 = base64.b64encode(pf.read()).decode()
+            if generated_pdf and os.path.exists(pdf_path):
+                with open(pdf_path, "rb") as pf:
+                    b64 = base64.b64encode(pf.read()).decode()
 
-            st.components.v1.html(
-                f"""
-                <script>
-                const pdfData = "data:application/pdf;base64,{b64}";
-                const newWin = window.open("");
-                newWin.document.write("<html><head><title>Print</title></head><body style='margin:0'>");
-                newWin.document.write("<iframe src='" + pdfData + "' style='width:100%;height:100%;border:none' onload='this.contentWindow.focus();this.contentWindow.print();'></iframe>");
-                newWin.document.write("</body></html>");
-                newWin.document.close();
-                </script>
-                """,
-                height=0,
-            )
+                st.components.v1.html(
+                    f"""
+                    <script>
+                    const pdfData = "data:application/pdf;base64,{b64}";
+                    const newWin = window.open("");
+                    newWin.document.write("<html><head><title>Print</title></head><body style='margin:0'>");
+                    newWin.document.write("<iframe src='" + pdfData + "' style='width:100%;height:100%;border:none' onload='this.contentWindow.focus();this.contentWindow.print();'></iframe>");
+                    newWin.document.write("</body></html>");
+                    newWin.document.close();
+                    </script>
+                    """,
+                    height=0,
+                )
+            else:
+                st.warning("PDF 변환을 지원하지 않는 환경입니다. DOCX 파일을 사용해주세요.")
 
         html = textwrap.dedent(
             f"""
