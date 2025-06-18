@@ -1551,19 +1551,20 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # 5. 필요서류: rows 12-18 available
     doc_start = 12 + extra_reqs
     output2_text_list = output2_text_list[:15]
-    max_docs = max(5, len(output2_text_list))
-    extra_docs = max(0, max_docs - 7)
-    for i in range(extra_docs):
-        new_row = clone_row(table, 18 + extra_reqs + i)
-        for cell in new_row.cells:
-            set_cell_font(cell, 11)    
-    for i in range(max_docs):
-        row = doc_start + i
-        line = output2_text_list[i] if i < len(output2_text_list) else ""
-        for c in [0, 1, 2]:
-            cell = table.cell(row, c)
-            cell.text = line
-            set_cell_font(cell, 11)
+    if output2_text_list:
+        max_docs = max(5, len(output2_text_list))
+        extra_docs = max(0, max_docs - 7)
+        for i in range(extra_docs):
+            new_row = clone_row(table, 18 + extra_reqs + i)
+            for cell in new_row.cells:
+                set_cell_font(cell, 11)
+        for i in range(max_docs):
+            row = doc_start + i
+            line = output2_text_list[i] if i < len(output2_text_list) else ""
+            for c in [0, 1, 2]:
+                cell = table.cell(row, c)
+                cell.text = line
+                set_cell_font(cell, 11)
         cell = table.cell(row, 3)
         cell.text = ""
         set_cell_font(cell, 11)
@@ -1656,6 +1657,8 @@ if st.session_state.step == 8:
         if generated_pdf and os.path.exists(pdf_path):
             with open(pdf_path, "rb") as pf:
                 pdf_b64 = base64.b64encode(pf.read()).decode()
+        else:
+            st.warning("PDF 파일이 생성되지 않아 인쇄 기능을 사용할 수 없습니다.")    
             
         st.markdown(
             """
@@ -1672,7 +1675,7 @@ if st.session_state.step == 8:
             unsafe_allow_html=True,
         )
 
-        left_col, right_col = st.columns(2)
+        left_col, spacer, right_col = st.columns([1,5,1])
         with left_col:
             st.download_button(
                 "📄 파일 다운로드",
@@ -1686,8 +1689,16 @@ if st.session_state.step == 8:
             "<div id='popup-error' style='color:red'></div>",
             unsafe_allow_html=True,
         )
-        st.markdown("")
-        
+        # Display current page number directly below the buttons
+        st.markdown(
+            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+            unsafe_allow_html=True,
+        )
+        # Page title appears on the third row with reduced font size
+        st.markdown(
+            "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+            unsafe_allow_html=True,
+        )
         if print_clicked:
             pdf_path = file_path.replace(".docx", ".pdf")
             generated_pdf = convert_docx_to_pdf(file_path, pdf_path)
@@ -1710,7 +1721,9 @@ if st.session_state.step == 8:
                     height=0,
                 )
             else:
-                st.warning("PDF 변환을 지원하지 않는 환경입니다. DOCX 파일을 사용해주세요.")
+                st.warning(
+                    "PDF 파일을 생성하지 못해 인쇄 기능을 사용할 수 없습니다."
+                )
 
         html = textwrap.dedent(
             f"""
@@ -1768,28 +1781,18 @@ if st.session_state.step == 8:
   </tr>
 """
         )
-        max_docs = max(5, len(output2_text_list))
-        for i in range(max_docs):
-            line = output2_text_list[i] if i < len(output2_text_list) else ""
-            html += (
-                f"<tr><td colspan='3' class='normal' style='text-align:left;width:81%'>"
-                f"{line}</td><td class='normal' style='width:8%'></td>"
-                f"<td class='normal' style='width:11%'></td></tr>"
-            )
+        if output2_text_list:
+            max_docs = max(5, len(output2_text_list))
+            for i in range(max_docs):
+                line = output2_text_list[i] if i < len(output2_text_list) else ""
+                html += (
+                    f"<tr><td colspan='3' class='normal' style='text-align:left;width:81%'>"
+                    f"{line}</td><td class='normal' style='width:8%'></td>"
+                    f"<td class='normal' style='width:11%'></td></tr>"
+                )
             
     if html is not None:
         html += "</table>"
-
-    st.markdown(
-        "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
-        unsafe_allow_html=True,
-    )
-    # Display current page number regardless of result state
-    st.markdown(
-        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-        unsafe_allow_html=True,
-    )
-
     if current_idx is None:
         st.write(
             "해당 변경사항에 대한 충족조건을 고려하였을 때,\n",
