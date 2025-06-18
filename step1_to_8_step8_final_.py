@@ -1448,8 +1448,13 @@ def convert_docx_to_pdf(docx_path: str, pdf_path: str):
 
 def apply_column_widths(table, ratios):
     """Apply column width ratios to all rows of ``table``."""
-    apply_column_widths(table, width_ratios)
-
+    first_row = table.rows[0]
+    orig_widths = [cell.width for cell in first_row.cells]
+    new_widths = [int(w * r) if w else None for w, r in zip(orig_widths, ratios)]
+    for row in table.rows:
+        for idx, width in enumerate(new_widths):
+            if idx < len(row.cells) and width:
+                row.cells[idx].width = width
 
 def create_application_docx(current_key, result, requirements, selections, output2_text_list, file_path):
     # Load template to preserve all styles and merges
@@ -1460,11 +1465,6 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     # 2. 변경유형과 4. 충족조건은 약 1.5×, 5. 필요서류는 약 1.1×
     width_ratios = [4 / 7, 1.3, 1.5, 1.5, 1.1]
     apply_column_widths(table, width_ratios)
-    new_widths = [int(w * r) if w else None for w, r in zip(orig_widths, width_ratios)]
-    for row in table.rows:
-        for idx, width in enumerate(new_widths):
-            if width:
-                row.cells[idx].width = width
 
     # Shrink row heights to 80% of the template values
     for row in table.rows:
