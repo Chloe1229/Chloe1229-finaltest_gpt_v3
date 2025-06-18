@@ -7,9 +7,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
-import os
 import textwrap
-import re
 import base64
 import html
 import ast
@@ -19,6 +17,7 @@ except Exception:
     convert = None
 import platform
 import shutil
+import os
 
 
 # ===== 초기 상태 정의 =====
@@ -1742,9 +1741,14 @@ if st.session_state.step == 8:
                 file_bytes,
                 file_name=f"신청서_{current_key}_{current_idx}.docx",
                 use_container_width=True,
+                key=f"download_{page}",
             )
         with right_col:
-            print_clicked = st.button("🖨 인쇄하기", use_container_width=True)
+            print_clicked = st.button(
+                "🖨 인쇄하기",
+                use_container_width=True,
+                key=f"print_{page}",
+            )
 
 
         if print_clicked:
@@ -1856,9 +1860,9 @@ if st.session_state.step == 8:
 
     if current_idx is None:
         st.write(
-            "해당 변경사항에 대한 충족조건을 고려하였을 때,\n",
-            "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n",
-            "범위에 해당하지 않는 것으로 확인됩니다.",
+            "해당 변경사항에 대한 충족조건을 고려하였을 때,\n"
+            "「의약품 허가 후 제조방법 변경관리 가이드라인」에서 제시하고 있는\n"
+            "범위에 해당하지 않는 것으로 확인됩니다."
         )
     else:
         st.markdown(html_content, unsafe_allow_html=True)
@@ -1866,7 +1870,7 @@ if st.session_state.step == 8:
     # Navigation controls appear on every page
     st.markdown('<div class="nav-row">', unsafe_allow_html=True)
     st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
-    if st.button("⬅ 이전"):
+    if st.button("⬅ 이전", key=f"prev_{page}"):
         if page == 0:
             st.session_state.step = 7
             st.session_state.pop("step8_page", None)
@@ -1874,6 +1878,8 @@ if st.session_state.step == 8:
             st.session_state.step8_page -= 1
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('<div class="nav-btn">', unsafe_allow_html=True)
-    if st.button("다음 ➡") and page < total_pages - 1:
+    if st.button("다음 ➡", key=f"next_{page}") and page < total_pages - 1:
         st.session_state.step8_page += 1
     st.markdown('</div></div>', unsafe_allow_html=True)
+    if os.path.exists(pdf_path):
+        os.remove(pdf_path)
