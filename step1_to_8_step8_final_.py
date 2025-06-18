@@ -3,6 +3,8 @@ from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_ROW_HEIGHT_RULE, WD_ALIGN_VERTICAL
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 import textwrap
@@ -1412,6 +1414,12 @@ def set_cell_font(cell, font_size=11):
             run.font.size = Pt(font_size)
         paragraph.paragraph_format.line_spacing = 1.4
 
+def enable_word_wrap(cell):
+    """Ensure text in the cell wraps even for long continuous strings."""
+    tc_pr = cell._tc.get_or_add_tcPr()
+    if tc_pr.find(qn("w:wordWrap")) is None:
+        tc_pr.append(OxmlElement("w:wordWrap"))
+
 def clone_row(table, row_idx):
     """Clone table row at row_idx and insert below it."""
     tr = table.rows[row_idx]._tr
@@ -1422,7 +1430,7 @@ def clone_row(table, row_idx):
         cell.text = ""
         set_cell_font(cell, 11)
     return new_row
-
+    
 def convert_docx_to_pdf(docx_path: str, pdf_path: str):
     """Convert a DOCX file to PDF using docx2pdf if possible.
 
@@ -1503,6 +1511,10 @@ def create_application_docx(current_key, result, requirements, selections, outpu
     for r, c in header_cells:
         r_idx = r + extra_reqs if r >= 11 else r
         set_cell_font(table.cell(r_idx, c), 12)
+
+    doc_header_row = 11 + extra_reqs
+    for c in [0, 1, 2]:
+        enable_word_wrap(table.cell(doc_header_row, c))
         
     # 1. 신청인: template rows 0-2, columns 2-4 hold the value area
     for r_idx, key in enumerate(["name", "site", "product"]):
@@ -1510,7 +1522,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
             cell = table.cell(r_idx, c)
             cell.text = ""
             set_cell_font(cell, 11)
-
+            
     # 2-3. 변경유형 / 신청유형 (row 4)
     change_text = result["title_text"]
     apply_text = result["output_1_tag"]
@@ -1540,6 +1552,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
             cell = table.cell(row, c)
             cell.text = text
             set_cell_font(cell, 11)
+            enable_word_wrap(cell)
         for c in [3, 4]:
             cell = table.cell(row, c)
             cell.text = symbol
@@ -1565,6 +1578,7 @@ def create_application_docx(current_key, result, requirements, selections, outpu
                 cell = table.cell(row, c)
                 cell.text = line
                 set_cell_font(cell, 11)
+                enable_word_wrap(cell)
         cell = table.cell(row, 3)
         cell.text = ""
         set_cell_font(cell, 11)
@@ -1605,11 +1619,20 @@ if st.session_state.step == 8:
     total_pages = len(page_list)
     current_key, current_idx = page_list[page]
 
+    # Header should appear regardless of whether a result exists
+    st.markdown(
+        f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
+        unsafe_allow_html=True,
+    )
+
     result = None
     html = None
     # Initialize list outside the conditional so it's always reset
     output2_text_list = []
-
 
     if current_idx is not None:
         result = step7_results[current_key][current_idx]
@@ -1629,13 +1652,10 @@ if st.session_state.step == 8:
             )
             for rk in requirements
         }
-        output2_text_list = [line.strip() for line in result.get("output_2_text", "").split("\n") if line.strip()]
-        for idx, line in enumerate(output2_text_list):
-            if re.match(r"^\d+[.)]", line):
-                output2_text_list = output2_text_list[idx:]
-                break
-        else:
-            output2_text_list = []
+        raw_lines = [line.strip() for line in result.get("output_2_text", "").split("\n")]
+        if raw_lines and raw_lines[0] == "필요서류는 다음과 같습니다.":
+            raw_lines = raw_lines[1:]
+        output2_text_list = [line for line in raw_lines if line]
         output2_text_list = output2_text_list[:15]
         with NamedTemporaryFile(delete=False, suffix=".docx") as tmp:
             file_path = tmp.name
@@ -1669,36 +1689,40 @@ if st.session_state.step == 8:
             .normal { font-size: 11pt; }
             .nav-row { display: flex; justify-content: space-between; align-items: center; }
             .nav-btn { width: 150px; white-space: nowrap; }
+            td[style*='width:81%'] { white-space: pre-wrap; word-break: break-all; }
+                white-space: nowrap;
             }
             </style>
             """,
             unsafe_allow_html=True,
         )
 
-        left_col, spacer, right_col = st.columns([1,5,1])
+        left_col, spacer, right_spacer, right_col = st.columns([1,5,0.5,0.5])
         with left_col:
             st.download_button(
                 "📄 파일 다운로드",
                 file_bytes,
                 file_name=f"신청서_{current_key}_{current_idx}.docx",
+                use_container_width=True,
             )
         with right_col:
-            print_clicked = st.button("🖨 인쇄하기")
+            print_clicked = st.button("🖨 인쇄하기", use_container_width=True)
         popup_error = st.empty()
         popup_error.markdown(
             "<div id='popup-error' style='color:red'></div>",
             unsafe_allow_html=True,
         )
-        # Display current page number directly below the buttons
-        st.markdown(
-            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
-            unsafe_allow_html=True,
-        )
-        # Page title appears on the third row with reduced font size
+        # Page title appears directly below the buttons
         st.markdown(
             "<h5 style='text-align:center; font-size:0.85em'>「의약품 허가 후 제조방법 변경관리 가이드라인(민원인 안내서)」[붙임] 신청양식 예시</h5>",
             unsafe_allow_html=True,
         )
+        # Display current page number beneath the title
+        st.markdown(
+            f"<h6 style='text-align:center'>{page+1} / {total_pages}</h6>",
+            unsafe_allow_html=True,
+        )
+
         if print_clicked:
             pdf_path = file_path.replace(".docx", ".pdf")
             generated_pdf = convert_docx_to_pdf(file_path, pdf_path)
@@ -1732,6 +1756,7 @@ if st.session_state.step == 8:
             td {{ border: 1px solid black; padding: 6px; text-align: center; vertical-align: middle; }}
             .title {{ font-weight: bold; font-size: 12pt; }}
             .normal {{ font-size: 11pt; }}
+            td[style*='width:81%'] {{ white-space: pre-wrap; word-break: break-all; }}
             </style>
             <table>
   <tr>
@@ -1775,7 +1800,7 @@ if st.session_state.step == 8:
         html += textwrap.dedent(
             """
   <tr>
-    <td class='title' colspan='3' style='width:81%'>5. 필요서류 (해당하는 필요서류 기재)</td>
+    <td class='title' colspan='3' style='width:81%; white-space:pre-wrap; word-break:break-all;'>5. 필요서류 (해당하는 필요서류 기재)</td>
     <td class='title' style='width:8%'>구비 여부<br>(○, X 중 선택)</td>
     <td class='title' style='width:11%'>해당 페이지 표시</td>
   </tr>
@@ -1786,7 +1811,7 @@ if st.session_state.step == 8:
             for i in range(max_docs):
                 line = output2_text_list[i] if i < len(output2_text_list) else ""
                 html += (
-                    f"<tr><td colspan='3' class='normal' style='text-align:left;width:81%'>"
+                    f"<tr><td colspan='3' class='normal' style='text-align:left;width:81%; white-space:pre-wrap; word-break:break-all;'>"
                     f"{line}</td><td class='normal' style='width:8%'></td>"
                     f"<td class='normal' style='width:11%'></td></tr>"
                 )
