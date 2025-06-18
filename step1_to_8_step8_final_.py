@@ -2,14 +2,18 @@ import streamlit as st
 from docx import Document
 from docx.shared import Pt
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_ALIGN_VERTICAL, WD_ROW_HEIGHT_RULE
 from copy import deepcopy
 from tempfile import NamedTemporaryFile
 import os
 import textwrap
 import re
 import base64
-from docx2pdf import convert
+try:
+    from docx2pdf import convert
+except Exception:
+    convert = None
+import platform
+import shutil
 
 
 # ===== 초기 상태 정의 =====
@@ -1419,10 +1423,28 @@ def clone_row(table, row_idx):
         set_cell_font(cell, 11)
     return new_row
 
-def convert_docx_to_pdf(docx_path: str, pdf_path: str) -> str:
-    """Convert a DOCX file to PDF using docx2pdf."""
-    convert(docx_path, pdf_path)
-    return pdf_path
+def convert_docx_to_pdf(docx_path: str, pdf_path: str):
+    """Convert a DOCX file to PDF using docx2pdf if possible.
+
+    Returns the path to the generated PDF or ``None`` when conversion is not
+    available in the current environment.
+    """
+    if convert is None:
+        st.warning("docx2pdf 모듈을 사용할 수 없어 PDF 변환을 건너뜁니다.")
+        return None
+
+    system = platform.system()
+    libreoffice_path = shutil.which("libreoffice") or shutil.which("soffice")
+    if system not in ("Windows", "Darwin") and not libreoffice_path:
+        st.warning("PDF 변환을 지원하지 않는 환경입니다. DOCX 파일을 사용해주세요.")
+        return None
+
+    try:
+        convert(docx_path, pdf_path)
+        return pdf_path
+    except Exception as e:
+        st.error(f"PDF 변환 중 오류가 발생했습니다: {e}")
+        return None
 
 def apply_column_widths(table, ratios):
     """Apply column width ratios to all rows of ``table``."""
